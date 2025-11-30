@@ -62,5 +62,5 @@ export const ENTRY_FEE_OPTIONS = [
 ]
 
 // Max players range
-export const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 7, 8]
+export const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5]
 

@@ -10,20 +10,16 @@ fn get_board_size(max_players: u32) -> (usize, usize) {
     match max_players {
         2 => (9, 6),      // Classic setup
         3 | 4 => (12, 10), // More space for 3-4 players
-        5 => (15, 15),    // Large board for 5 players
-        6 => (15, 15),    // Large board for 6 players
-        7 => (20, 20),    // Very large for 7 players
-        8 => (20, 20),    // Maximum size for 8 players
+        5 => (15, 15),    // Maximum size for 5 players (max allowed)
         _ => {
             // Fallback logic
             if max_players <= 2 {
                 (9, 6)
             } else if max_players <= 4 {
                 (12, 10)
-            } else if max_players <= 6 {
-                (15, 15)
             } else {
-                (20, 20)
+                // 5 players (max)
+                (15, 15)
             }
         }
     }

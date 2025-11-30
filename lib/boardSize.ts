@@ -14,20 +14,8 @@ export function getBoardSize(maxPlayers: number): { rows: number; cols: number }
       return { rows: 12, cols: 10 };
     
     case 5:
-      // 5 players need even more territory
+      // 5 players - maximum allowed
       return { rows: 15, cols: 15 };
-    
-    case 6:
-      // 6 players - large board
-      return { rows: 15, cols: 15 };
-    
-    case 7:
-      // 7 players - very large
-      return { rows: 20, cols: 20 };
-    
-    case 8:
-      // 8 players - maximum size
-      return { rows: 20, cols: 20 };
     
     default:
       // Fallback for edge cases
@@ -35,10 +23,9 @@ export function getBoardSize(maxPlayers: number): { rows: number; cols: number }
         return { rows: 9, cols: 6 };
       } else if (maxPlayers <= 4) {
         return { rows: 12, cols: 10 };
-      } else if (maxPlayers <= 6) {
-        return { rows: 15, cols: 15 };
       } else {
-        return { rows: 20, cols: 20 };
+        // 5 players (max)
+        return { rows: 15, cols: 15 };
       }
   }
 }
