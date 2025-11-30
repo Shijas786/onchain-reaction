@@ -92,8 +92,8 @@ export default function LocalSetup() {
                         <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => setPlayerCount(Math.min(5, playerCount + 1))}
-                            disabled={playerCount >= 5}
+                            onClick={() => setPlayerCount(Math.min(8, playerCount + 1))}
+                            disabled={playerCount >= 8}
                             className="w-12 h-12 !p-0 text-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-[#B5EAD7] text-black font-bold rounded-xl"
                         >
                             +

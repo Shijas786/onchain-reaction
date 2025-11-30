@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient } from "wagmi";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
-import { ARENA_ADDRESSES, parseUSDC, ENTRY_FEE_OPTIONS, MAX_PLAYERS_OPTIONS, getChainName, CHAIN_IDS } from "@/lib/contracts";
+import { ARENA_ADDRESSES, parseUSDC, ENTRY_FEE_OPTIONS, MAX_PLAYERS_OPTIONS, getChainName, CHAIN_IDS, USDC_ADDRESSES } from "@/lib/contracts";
 import { decodeEventLog } from "viem";
 import { generateRoomCode, formatRoomCode } from "@/lib/roomCode";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,12 +58,13 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     
     try {
       const entryFeeWei = parseUSDC(feeToUse);
+      const usdcAddress = USDC_ADDRESSES[selectedChain];
       
       const hash = await writeContractAsync({
         address: arenaAddress,
         abi: ChainOrbArenaAbi,
         functionName: "createMatch",
-        args: [entryFeeWei, BigInt(maxPlayers)],
+        args: [usdcAddress, entryFeeWei, BigInt(maxPlayers)],
         chainId: selectedChain,
       });
       

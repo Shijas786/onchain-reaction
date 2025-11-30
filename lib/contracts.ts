@@ -9,7 +9,7 @@ export const CHAIN_IDS = {
 
 // USDC addresses per chain (6 decimals)
 export const USDC_ADDRESSES: Record<number, `0x${string}`> = {
-  [CHAIN_IDS.BASE]: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', // Base USDC
+  [CHAIN_IDS.BASE]: '0x833589FcD6EDB6E08F4C7c32D4f61a2E6a6211bE', // Base USDC
   [CHAIN_IDS.ARBITRUM]: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Arbitrum USDC
 }
 
@@ -61,5 +61,5 @@ export const ENTRY_FEE_OPTIONS = [
 ]
 
 // Max players range
-export const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5]
+export const MAX_PLAYERS_OPTIONS = [2, 3, 4, 5, 6, 7, 8]
 
