@@ -9,8 +9,11 @@ import { DoodleBackground } from "@/components/ui/DoodleBackground";
 import { LobbyJoinButton } from "@/components/web3/LobbyJoinButton";
 import { motion } from "framer-motion";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
-import { ARENA_ADDRESSES, CHAIN_IDS, getChainName, formatUSDC } from "@/lib/contracts";
+import { ARENA_ADDRESSES, CHAIN_IDS, getChainName, formatUSDC, parseUSDC } from "@/lib/contracts";
 import { formatRoomCode } from "@/lib/roomCode";
+import { useLobby } from "@/hooks/useSpacetimeDB";
+import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
+import { getDbConnection } from "@/lib/spacetimedb/client";
 
 interface Player {
     id: string;
@@ -26,6 +29,7 @@ function LobbyContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
   const { address, isConnected } = useAccount();
+  const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
 
   const roomCode = params.id as string;
   const matchIdParam = searchParams.get("matchId");
@@ -40,6 +44,15 @@ function LobbyContent() {
 
     const [players, setPlayers] = useState<Player[]>([]);
   const [hasJoined, setHasJoined] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+
+  // SpacetimeDB lobby hook
+  const {
+    lobby: spacetimeLobby,
+    players: spacetimePlayers,
+    isHost: isSpacetimeHost,
+    startGame: startSpacetimeGame,
+  } = useLobby(roomCode);
 
   // Read match info from contract
   const { data: matchInfo, refetch: refetchMatch } = useReadContract({
@@ -83,9 +96,46 @@ function LobbyContent() {
       }
     : null;
 
-  // Update players list from contract data
+  // Create SpacetimeDB lobby if it doesn't exist (for existing matches)
+  useEffect(() => {
+    if (isSpacetimeConnected && match && !spacetimeLobby && matchIdParam && address) {
+      // Try to create lobby if match exists but SpacetimeDB lobby doesn't
+      const conn = getDbConnection();
+      if (conn) {
+        try {
+          conn.reducers.createLobby({
+            chainId,
+            matchId: BigInt(matchId),
+            arenaAddress,
+            hostAddress: match.host,
+            entryFee: match.entryFee.toString(),
+            maxPlayers: match.maxPlayers,
+            hostName: match.host.slice(0, 6) + "..." + match.host.slice(-4),
+            lobbyId: roomCode,
+          });
+          console.log('[LobbyPage] Created SpacetimeDB lobby for existing match');
+        } catch (err) {
+          console.error('[LobbyPage] Failed to create lobby (may already exist):', err);
+        }
+      }
+    }
+  }, [isSpacetimeConnected, match, spacetimeLobby, matchIdParam, address, chainId, arenaAddress, roomCode, matchId]);
+
+  // Update players list - prefer SpacetimeDB data, fallback to contract
     useEffect(() => {
-    if (contractPlayers && Array.isArray(contractPlayers)) {
+    if (spacetimePlayers && spacetimePlayers.length > 0) {
+      // Use SpacetimeDB players
+      const playerList: Player[] = spacetimePlayers.map((p) => ({
+        id: p.id,
+        name: p.name,
+        avatar: p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`,
+        address: p.address,
+        isHost: p.isHost,
+        farcasterHandle: p.farcasterHandle || `${p.address.slice(0, 6)}...${p.address.slice(-4)}`,
+      }));
+      setPlayers(playerList);
+    } else if (contractPlayers && Array.isArray(contractPlayers)) {
+      // Fallback to contract data
       const playerList: Player[] = (contractPlayers as string[]).map((addr, i) => ({
         id: addr,
         name: `Player ${i + 1}`,
@@ -96,7 +146,7 @@ function LobbyContent() {
       }));
       setPlayers(playerList);
     }
-  }, [contractPlayers, match?.host]);
+  }, [spacetimePlayers, contractPlayers, match?.host]);
 
   // Check if user has joined
   useEffect(() => {
@@ -115,9 +165,30 @@ function LobbyContent() {
   }, [refetchMatch, refetchPlayers]);
 
   const handleStartGame = async () => {
-    // TODO: Call startMatch on contract and SpacetimeDB
-    router.push(`/online/game/${matchId}?host=${isHost}&chainId=${chainId}&arena=${arenaAddress}`);
-    };
+    if (!players || players.length < 2) {
+      console.error('Need at least 2 players to start');
+      return;
+    }
+
+    setIsStarting(true);
+    try {
+      // Start game in SpacetimeDB
+      if (isSpacetimeConnected && startSpacetimeGame) {
+        const started = await startSpacetimeGame();
+        if (!started) {
+          console.error('Failed to start game in SpacetimeDB');
+          setIsStarting(false);
+          return;
+        }
+      }
+
+      // Navigate to game page (use roomCode as lobbyId)
+      router.push(`/online/game/${roomCode}?chainId=${chainId}&arena=${arenaAddress}`);
+    } catch (err) {
+      console.error('Failed to start game:', err);
+      setIsStarting(false);
+    }
+  };
 
   const handleJoinSuccess = () => {
     setHasJoined(true);
@@ -266,15 +337,16 @@ function LobbyContent() {
               </p>
               <appkit-button />
             </div>
-          ) : hasJoined || isHost ? (
-            isHost && players.length >= 2 ? (
+          ) : hasJoined || isHost || isSpacetimeHost ? (
+            (isHost || isSpacetimeHost) && players.length >= 2 ? (
                         <Button
                             variant="primary"
                             size="lg"
                             className="w-full max-w-xs shadow-lg shadow-blue-500/20"
                             onClick={handleStartGame}
+                            disabled={isStarting || !isSpacetimeConnected}
                         >
-                            Start Game
+                            {isStarting ? "Starting..." : "Start Game"}
                         </Button>
                     ) : (
                         <div className="text-center p-4 bg-white/50 backdrop-blur-md rounded-2xl border border-white/50">

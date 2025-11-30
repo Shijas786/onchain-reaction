@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient } from "wagmi";
+import { useState, useEffect } from "react";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient, useReadContract } from "wagmi";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
+import ERC20Abi from "@/abi/ERC20.json";
 import { ARENA_ADDRESSES, parseUSDC, ENTRY_FEE_OPTIONS, MAX_PLAYERS_OPTIONS, getChainName, CHAIN_IDS, USDC_ADDRESSES } from "@/lib/contracts";
 import { decodeEventLog } from "viem";
 import { generateRoomCode, formatRoomCode } from "@/lib/roomCode";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
+import { getDbConnection } from "@/lib/spacetimedb/client";
 
 interface CreateMatchButtonProps {
   onMatchCreated?: (matchId: number, chainId: number, roomCode?: string) => void;
@@ -15,12 +18,14 @@ interface CreateMatchButtonProps {
 export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   const { address, chainId: connectedChainId } = useAccount();
   const publicClient = usePublicClient();
+  const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
   
   const [selectedChain, setSelectedChain] = useState<number>(CHAIN_IDS.BASE);
   const [entryFee, setEntryFee] = useState<string>("5");
   const [customEntryFee, setCustomEntryFee] = useState<string>("");
   const [useCustomFee, setUseCustomFee] = useState<boolean>(false);
   const [maxPlayers, setMaxPlayers] = useState<number>(4);
+  const [step, setStep] = useState<'check' | 'approve' | 'create'>('check');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
@@ -29,19 +34,111 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   const [createdMatchId, setCreatedMatchId] = useState<number | null>(null);
 
   const arenaAddress = ARENA_ADDRESSES[selectedChain];
+  const usdcAddress = USDC_ADDRESSES[selectedChain];
+  const feeToUse = useCustomFee ? customEntryFee : entryFee;
+  const entryFeeWei = feeToUse ? parseUSDC(feeToUse) : BigInt(0);
+
+  // Check current USDC allowance
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: usdcAddress,
+    abi: ERC20Abi,
+    functionName: "allowance",
+    args: [address, arenaAddress],
+    chainId: selectedChain,
+    query: {
+      enabled: !!address && !!feeToUse,
+    },
+  });
+
+  // Check USDC balance
+  const { data: balance } = useReadContract({
+    address: usdcAddress,
+    abi: ERC20Abi,
+    functionName: "balanceOf",
+    args: [address],
+    chainId: selectedChain,
+    query: {
+      enabled: !!address,
+    },
+  });
 
   const { writeContractAsync, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
   });
 
-  async function handleCreate() {
-    if (!address || !publicClient) return;
+  // Reset step when fee or chain changes
+  useEffect(() => {
+    setStep('check');
+  }, [feeToUse, selectedChain]);
+
+  // Determine step based on allowance
+  useEffect(() => {
+    if (step === 'check' && allowance !== undefined && feeToUse) {
+      const currentAllowance = BigInt(allowance as string);
+      if (currentAllowance >= entryFeeWei && entryFeeWei > 0) {
+        setStep('create');
+      } else if (entryFeeWei > 0) {
+        setStep('approve');
+      }
+    }
+  }, [allowance, entryFeeWei, step, feeToUse]);
+
+  // Handle successful approval
+  useEffect(() => {
+    if (isSuccess && txHash && step === 'approve') {
+      refetchAllowance();
+      setTxHash(undefined);
+      setStep('create');
+    }
+  }, [isSuccess, txHash, step, refetchAllowance]);
+
+  async function handleApprove() {
+    if (!address || !feeToUse) return;
     
     setError(null);
     
     // Validate entry fee
-    const feeToUse = useCustomFee ? customEntryFee : entryFee;
+    const feeNum = parseFloat(feeToUse);
+    if (!feeToUse || isNaN(feeNum) || feeNum <= 0) {
+      setError("Please enter a valid entry fee");
+      return;
+    }
+    
+    setIsCreating(true);
+    
+    try {
+      const hash = await writeContractAsync({
+        address: usdcAddress,
+        abi: ERC20Abi,
+        functionName: "approve",
+        args: [arenaAddress, entryFeeWei],
+        chainId: selectedChain,
+      });
+      setTxHash(hash);
+    } catch (e: any) {
+      console.error(e);
+      const errorMessage = e?.shortMessage || e?.message || "";
+      const isUserRejection = 
+        errorMessage.toLowerCase().includes("user rejected") ||
+        e?.name === "UserRejectedRequestError";
+      
+      if (isUserRejection) {
+        setError("Transaction was cancelled. Please try again when ready.");
+      } else {
+        setError(e?.shortMessage || e?.message || "Approval failed. Please try again.");
+      }
+      setIsCreating(false);
+    }
+  }
+
+  async function handleCreate() {
+    if (!address || !publicClient) return;
+    
+    // Clear any previous errors
+    setError(null);
+    
+    // Validate entry fee
     const feeNum = parseFloat(feeToUse);
     
     if (!feeToUse || isNaN(feeNum) || feeNum <= 0) {
@@ -57,9 +154,6 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     setIsCreating(true);
     
     try {
-      const entryFeeWei = parseUSDC(feeToUse);
-      const usdcAddress = USDC_ADDRESSES[selectedChain];
-      
       const hash = await writeContractAsync({
         address: arenaAddress,
         abi: ChainOrbArenaAbi,
@@ -97,12 +191,58 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         const newRoomCode = generateRoomCode();
         setRoomCode(newRoomCode);
         setCreatedMatchId(matchId);
+        
+        // Create SpacetimeDB lobby
+        if (isSpacetimeConnected && address) {
+          try {
+            const conn = getDbConnection();
+            if (conn) {
+              const arenaAddress = ARENA_ADDRESSES[selectedChain];
+              const entryFeeWei = parseUSDC(useCustomFee ? customEntryFee : entryFee);
+              
+              conn.reducers.createLobby({
+                chainId: selectedChain,
+                matchId: BigInt(matchId),
+                arenaAddress,
+                hostAddress: address,
+                entryFee: entryFeeWei.toString(),
+                maxPlayers,
+                hostName: address.slice(0, 6) + "..." + address.slice(-4),
+                lobbyId: newRoomCode,
+              });
+              console.log('[CreateMatchButton] SpacetimeDB lobby created:', newRoomCode);
+            }
+          } catch (err) {
+            console.error('[CreateMatchButton] Failed to create SpacetimeDB lobby:', err);
+            // Continue anyway - match is created on-chain
+          }
+        }
+        
         setShowRoomCode(true);
       }
       
     } catch (e: any) {
       console.error(e);
-      setError(e?.shortMessage || e?.message || "Failed to create match");
+      
+      // Check if user rejected the transaction
+      const errorMessage = e?.shortMessage || e?.message || "";
+      const isUserRejection = 
+        errorMessage.toLowerCase().includes("user rejected") ||
+        errorMessage.toLowerCase().includes("user rejected the request") ||
+        e?.name === "UserRejectedRequestError";
+      
+      const isAllowanceError = 
+        errorMessage.toLowerCase().includes("transfer amount exceeds allowance") ||
+        errorMessage.toLowerCase().includes("allowance");
+      
+      if (isUserRejection) {
+        setError("Transaction was cancelled. Please try again when ready.");
+      } else if (isAllowanceError) {
+        setError("USDC approval required. Please approve USDC first.");
+        setStep('approve');
+      } else {
+        setError(e?.shortMessage || e?.message || "Failed to create match. Please try again.");
+      }
     } finally {
       setIsCreating(false);
     }
@@ -239,21 +379,84 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         </div>
       </div>
 
+      {/* Check balance */}
+      {balance !== undefined && entryFeeWei > 0 && BigInt(balance as string) < entryFeeWei && (
+        <div className="flex flex-col gap-2">
+          <button
+            disabled
+            className="w-full px-6 py-4 rounded-2xl bg-red-100 text-red-600 text-sm font-bold cursor-not-allowed"
+          >
+            Insufficient USDC Balance
+          </button>
+          <p className="text-xs text-slate-500 text-center">
+            Need ${feeToUse} USDC to create match
+          </p>
+        </div>
+      )}
+
+      {/* Step indicator */}
+      {balance !== undefined && entryFeeWei > 0 && BigInt(balance as string) >= entryFeeWei && step !== 'check' && (
+        <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+          <span className={step === 'approve' ? 'text-blue-600 font-bold' : ''}>
+            1. Approve USDC
+          </span>
+          <span>→</span>
+          <span className={step === 'create' ? 'text-blue-600 font-bold' : ''}>
+            2. Create Match
+          </span>
+        </div>
+      )}
+
+      {/* Approval Button */}
+      {step === 'approve' && balance !== undefined && entryFeeWei > 0 && BigInt(balance as string) >= entryFeeWei && (
+        <button
+          onClick={handleApprove}
+          disabled={isProcessing}
+          className="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg shadow-blue-500/25 disabled:opacity-60 transition-all hover:shadow-blue-500/40"
+        >
+          {isPending && "Confirm in wallet..."}
+          {isConfirming && "Approving USDC..."}
+          {!isPending && !isConfirming && `Approve $${feeToUse} USDC`}
+        </button>
+      )}
+
       {/* Create Button */}
-      <button
-        onClick={handleCreate}
-        disabled={isProcessing}
-        className="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-bold shadow-lg disabled:opacity-60 transition-all hover:shadow-xl"
-      >
-        {isPending && "Confirm in wallet..."}
-        {isConfirming && "Creating match..."}
-        {!isPending && !isConfirming && "Create Match"}
-      </button>
+      {step === 'create' && balance !== undefined && entryFeeWei > 0 && BigInt(balance as string) >= entryFeeWei && (
+        <button
+          onClick={handleCreate}
+          disabled={isProcessing}
+          className="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-bold shadow-lg disabled:opacity-60 transition-all hover:shadow-xl"
+        >
+          {isPending && "Confirm in wallet..."}
+          {isConfirming && "Creating match..."}
+          {!isPending && !isConfirming && "Create Match"}
+        </button>
+      )}
+
+      {/* Fallback create button if balance check not ready */}
+      {(!balance || step === 'check') && (
+        <button
+          onClick={handleCreate}
+          disabled={isProcessing}
+          className="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-bold shadow-lg disabled:opacity-60 transition-all hover:shadow-xl"
+        >
+          {isPending && "Confirm in wallet..."}
+          {isConfirming && "Creating match..."}
+          {!isPending && !isConfirming && "Create Match"}
+        </button>
+      )}
 
       {error && (
-        <p className="text-xs text-red-500 text-center bg-red-50 px-3 py-2 rounded-xl">
-          {error}
-        </p>
+        <div className="text-xs text-red-500 text-center bg-red-50 px-3 py-2 rounded-xl flex items-center justify-between gap-2">
+          <span className="flex-1">{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-600 font-bold"
+            aria-label="Dismiss error"
+          >
+            ×
+          </button>
+        </div>
       )}
 
       {isSuccess && !showRoomCode && (

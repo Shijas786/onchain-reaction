@@ -26,3 +26,4 @@ export function formatRoomCode(code: string): string {
   return code.toUpperCase().replace(/(.{2})/g, '$1 ').trim();
 }
 
+
