@@ -1,15 +1,14 @@
 // Frontend client helpers for OnchainReaction contract
 // These are convenience wrappers around wagmi hooks
 
-import { createPublicClient, createWalletClient, http, type PublicClient, type WalletClient } from "viem";
+import { createPublicClient, createWalletClient, http } from "viem";
 import { base, arbitrum } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { onchainReactionAbi } from "./onchainReaction";
-import { CHAIN_IDS, CHAIN_CONFIG } from "./contracts";
 
 // For frontend, you'll usually be using wagmi hooks instead.
 // This is more for server actions / scripts.
-export function getPublicClient(chain: "base" | "arbitrum"): PublicClient {
+export function getPublicClient(chain: "base" | "arbitrum") {
   const chainConfig = chain === "base" ? base : arbitrum;
   
   return createPublicClient({
@@ -18,7 +17,7 @@ export function getPublicClient(chain: "base" | "arbitrum"): PublicClient {
   });
 }
 
-export function getWalletClient(chain: "base" | "arbitrum", privateKey?: `0x${string}`): WalletClient {
+export function getWalletClient(chain: "base" | "arbitrum", privateKey?: `0x${string}`) {
   if (!privateKey) {
     throw new Error("Private key required for wallet client");
   }
@@ -49,7 +48,7 @@ export async function uiCreateMatch({
   token: `0x${string}`;
   entryFee: bigint;
   maxPlayers: number;
-  walletClient: WalletClient;
+  walletClient: ReturnType<typeof getWalletClient>;
 }) {
   const hash = await walletClient.writeContract({
     address: contract,
@@ -70,7 +69,7 @@ export async function uiJoinMatch({
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  walletClient: WalletClient;
+  walletClient: ReturnType<typeof getWalletClient>;
 }) {
   const hash = await walletClient.writeContract({
     address: contract,
@@ -86,7 +85,7 @@ export async function uiLeaveMatch(params: {
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  walletClient: WalletClient;
+  walletClient: ReturnType<typeof getWalletClient>;
 }) {
   const hash = await params.walletClient.writeContract({
     address: params.contract,
@@ -102,7 +101,7 @@ export async function uiStartMatch(params: {
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  walletClient: WalletClient;
+  walletClient: ReturnType<typeof getWalletClient>;
 }) {
   const hash = await params.walletClient.writeContract({
     address: params.contract,
@@ -118,7 +117,7 @@ export async function uiClaimPrize(params: {
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  walletClient: WalletClient;
+  walletClient: ReturnType<typeof getWalletClient>;
 }) {
   const hash = await params.walletClient.writeContract({
     address: params.contract,
@@ -139,7 +138,7 @@ export async function uiGetMatch({
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  publicClient?: PublicClient;
+  publicClient?: ReturnType<typeof getPublicClient>;
 }) {
   const client = publicClient || getPublicClient(chain);
 
@@ -172,7 +171,7 @@ export async function uiGetPlayers({
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  publicClient?: PublicClient;
+  publicClient?: ReturnType<typeof getPublicClient>;
 }) {
   const client = publicClient || getPublicClient(chain);
 
