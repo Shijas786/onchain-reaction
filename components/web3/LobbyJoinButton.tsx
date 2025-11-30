@@ -5,12 +5,15 @@ import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAcc
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
 import ERC20Abi from "@/abi/ERC20.json";
 import { USDC_ADDRESSES, parseUSDC } from "@/lib/contracts";
+import { useLobby } from "@/hooks/useSpacetimeDB";
+import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 
 interface LobbyJoinButtonProps {
   chainId: number;
   arenaAddress: `0x${string}`;
   matchId: number;
   entryFee: string; // Human readable e.g. "5" for $5 USDC
+  lobbyId?: string; // Room code for SpacetimeDB lobby
   onSuccess?: () => void;
 }
 
@@ -19,9 +22,12 @@ export function LobbyJoinButton({
   arenaAddress, 
   matchId, 
   entryFee,
+  lobbyId,
   onSuccess 
 }: LobbyJoinButtonProps) {
   const { address } = useAccount();
+  const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
+  const { joinLobby, confirmDeposit } = useLobby(lobbyId || null);
   const [step, setStep] = useState<'check' | 'approve' | 'join' | 'done'>('check');
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const [error, setError] = useState<string | null>(null);
@@ -68,19 +74,36 @@ export function LobbyJoinButton({
 
   // Handle successful transaction
   useEffect(() => {
-    if (isSuccess && txHash) {
+    if (isSuccess && txHash && address && lobbyId) {
       if (step === 'approve') {
         // Approval done, move to join
         refetchAllowance();
         setTxHash(undefined);
         setStep('join');
       } else if (step === 'join') {
-        // Join done
-        setStep('done');
-        onSuccess?.();
+        // Join on-chain done, now join SpacetimeDB lobby
+        (async () => {
+          try {
+            if (isSpacetimeConnected) {
+              // Join SpacetimeDB lobby
+              const joined = await joinLobby(lobbyId, address, `Player ${address.slice(0, 6)}...${address.slice(-4)}`);
+              if (joined) {
+                console.log('[LobbyJoinButton] Successfully joined SpacetimeDB lobby');
+                // Confirm deposit
+                await confirmDeposit(lobbyId, address);
+                console.log('[LobbyJoinButton] Deposit confirmed in SpacetimeDB');
+              }
+            }
+          } catch (err) {
+            console.error('[LobbyJoinButton] Failed to join SpacetimeDB:', err);
+            // Continue anyway - player is on-chain
+          }
+          setStep('done');
+          onSuccess?.();
+        })();
       }
     }
-  }, [isSuccess, txHash, step, refetchAllowance, onSuccess]);
+  }, [isSuccess, txHash, step, refetchAllowance, onSuccess, address, lobbyId, isSpacetimeConnected, joinLobby, confirmDeposit]);
 
   async function handleApprove() {
     setError(null);

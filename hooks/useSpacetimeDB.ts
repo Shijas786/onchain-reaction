@@ -390,7 +390,17 @@ export function useLobby(lobbyId: string | null) {
   // Derived state
   const currentPlayer = players.find((p) => p.identity?.toHexString() === identity);
   const isHost = currentPlayer?.isHost || false;
-  const alivePlayers = players.filter((p) => p.isAlive);
+  
+  // Sort players by joined_at to ensure consistent turn order
+  const sortedPlayers = [...players].sort((a, b) => {
+    const aTime = a.joinedAt ? Number(a.joinedAt) : 0;
+    const bTime = b.joinedAt ? Number(b.joinedAt) : 0;
+    return aTime - bTime;
+  });
+  
+  const alivePlayers = sortedPlayers.filter((p) => p.isAlive);
+  console.log(`[useLobby] Turn calculation: ${alivePlayers.length} alive players, currentPlayerIndex: ${gameState?.currentPlayerIndex || 0}`);
+  
   const isMyTurn = gameState
     ? alivePlayers[gameState.currentPlayerIndex % alivePlayers.length]?.identity?.toHexString() === identity
     : false;

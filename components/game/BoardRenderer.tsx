@@ -514,7 +514,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 style={{
                     width: '100%',
                     maxWidth: 'min(100vw - 2rem, 1400px)',
-                    maxHeight: '80vh',
+                    maxHeight: '75vh',
                     height: 'auto',
                     aspectRatio: `${canvasWidth} / ${canvasHeight}`,
                     background: 'transparent',

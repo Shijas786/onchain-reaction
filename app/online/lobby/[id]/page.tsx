@@ -306,6 +306,7 @@ function LobbyContent() {
                 arenaAddress={arenaAddress}
                 matchId={matchId}
                 entryFee={entryFee}
+                lobbyId={roomCode}
                 onSuccess={handleJoinSuccess}
               />
             </div>
