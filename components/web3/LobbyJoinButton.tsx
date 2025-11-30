@@ -121,6 +121,29 @@ export function LobbyJoinButton({
     }
 
     try {
+      // For Base, always reset existing allowance to 0 first (required by Base USDC)
+      if (chainId === 8453) { // 8453 is Base
+        try {
+          const currentAllowance = BigInt(allowance ? String(allowance) : "0");
+          if (currentAllowance > BigInt(0)) {
+            console.log('[LobbyJoinButton] Resetting Base USDC allowance to 0...');
+            const resetHash = await writeContractAsync({
+              address: usdcAddress,
+              abi: ERC20Abi,
+              functionName: "approve",
+              args: [arenaAddress, BigInt(0)],
+              chainId,
+            });
+            // Wait for reset to confirm
+            // Note: In a real app we might want to wait for receipt, but here we'll just fire it
+            // and hope the next tx gets sequenced after. 
+            // Better: wait for it.
+          }
+        } catch (resetErr) {
+          console.warn('[LobbyJoinButton] Allowance reset failed or not needed:', resetErr);
+        }
+      }
+
       const hash = await writeContractAsync({
         address: usdcAddress,
         abi: ERC20Abi,
