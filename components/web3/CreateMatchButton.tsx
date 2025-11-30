@@ -145,23 +145,62 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     setIsCreating(true);
     
     try {
+      // Base USDC requires resetting allowance to 0 before setting new approval
+      const currentAllowance = safeBigInt(allowance);
+      const hasExistingAllowance = currentAllowance !== null && currentAllowance > BigInt(0);
+      
+      // For Base, always reset existing allowance to 0 first (required by Base USDC)
+      if (selectedChain === CHAIN_IDS.BASE && hasExistingAllowance) {
+        try {
+          console.log('[CreateMatchButton] Resetting Base USDC allowance to 0...');
+          const resetHash = await writeContractAsync({
+            address: usdcAddress,
+            abi: ERC20Abi,
+            functionName: "approve",
+            args: [arenaAddress, BigInt(0)],
+            chainId: selectedChain,
+          });
+          
+          if (publicClient) {
+            await publicClient.waitForTransactionReceipt({ hash: resetHash });
+            // Wait a bit for state to update
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await refetchAllowance();
+          }
+        } catch (resetErr: any) {
+          console.warn('[CreateMatchButton] Allowance reset failed (may continue anyway):', resetErr);
+        }
+      }
+      
+      // Use maximum approval (type(uint256).max) - standard pattern for better UX
+      const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+      
       const hash = await writeContractAsync({
         address: usdcAddress,
         abi: ERC20Abi,
         functionName: "approve",
-        args: [arenaAddress, entryFeeWei],
+        args: [arenaAddress, maxApproval],
         chainId: selectedChain,
       });
       setTxHash(hash);
     } catch (e: any) {
-      console.error(e);
+      console.error('[CreateMatchButton] Approval error:', e);
       const errorMessage = e?.shortMessage || e?.message || "";
       const isUserRejection = 
         errorMessage.toLowerCase().includes("user rejected") ||
+        errorMessage.toLowerCase().includes("user rejected the request") ||
         e?.name === "UserRejectedRequestError";
+      
+      const isSimulationError = 
+        errorMessage.toLowerCase().includes("simulation failed") ||
+        errorMessage.toLowerCase().includes("execution reverted");
       
       if (isUserRejection) {
         setError("Transaction was cancelled. Please try again when ready.");
+      } else if (isSimulationError && selectedChain === CHAIN_IDS.BASE) {
+        setError("Base USDC approval failed. If you have an existing allowance, please reset it to 0 in your wallet first, then try again.");
+      } else if (isSimulationError) {
+        setError("Approval failed. Please check your USDC balance and try again.");
       } else {
         setError(e?.shortMessage || e?.message || "Approval failed. Please try again.");
       }
@@ -512,7 +551,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         >
           {isPending && "Confirm in wallet..."}
           {isConfirming && "Approving USDC..."}
-          {!isPending && !isConfirming && `Approve $${feeToUse} USDC`}
+          {!isPending && !isConfirming && "Approve USDC (Max Amount)"}
         </button>
       )}
 
