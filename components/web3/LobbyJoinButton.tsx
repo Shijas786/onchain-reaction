@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain } from "wagmi";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
 import ERC20Abi from "@/abi/ERC20.json";
 import { USDC_ADDRESSES, parseUSDC } from "@/lib/contracts";
@@ -17,15 +17,16 @@ interface LobbyJoinButtonProps {
   onSuccess?: () => void;
 }
 
-export function LobbyJoinButton({ 
-  chainId, 
-  arenaAddress, 
-  matchId, 
+export function LobbyJoinButton({
+  chainId,
+  arenaAddress,
+  matchId,
   entryFee,
   lobbyId,
-  onSuccess 
+  onSuccess
 }: LobbyJoinButtonProps) {
-  const { address } = useAccount();
+  const { address, chainId: connectedChainId } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
   const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
   const { joinLobby, confirmDeposit } = useLobby(lobbyId || null);
   const [step, setStep] = useState<'check' | 'approve' | 'join' | 'done'>('check');
@@ -61,7 +62,7 @@ export function LobbyJoinButton({
   // Determine step based on allowance
   useEffect(() => {
     if (step === 'done') return;
-    
+
     if (allowance !== undefined) {
       const currentAllowance = BigInt(allowance as string);
       if (currentAllowance >= entryFeeWei) {
@@ -107,6 +108,18 @@ export function LobbyJoinButton({
 
   async function handleApprove() {
     setError(null);
+
+    // Switch chain if needed
+    if (connectedChainId !== chainId) {
+      try {
+        await switchChainAsync({ chainId });
+      } catch (err) {
+        console.error('Failed to switch chain:', err);
+        setError("Please switch to the correct network to continue.");
+        return;
+      }
+    }
+
     try {
       const hash = await writeContractAsync({
         address: usdcAddress,
@@ -124,6 +137,18 @@ export function LobbyJoinButton({
 
   async function handleJoin() {
     setError(null);
+
+    // Switch chain if needed
+    if (connectedChainId !== chainId) {
+      try {
+        await switchChainAsync({ chainId });
+      } catch (err) {
+        console.error('Failed to switch chain:', err);
+        setError("Please switch to the correct network to continue.");
+        return;
+      }
+    }
+
     try {
       const hash = await writeContractAsync({
         address: arenaAddress,

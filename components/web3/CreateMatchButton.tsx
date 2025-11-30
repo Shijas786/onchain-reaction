@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient, useReadContract } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient, useReadContract, useSwitchChain } from "wagmi";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
 import ERC20Abi from "@/abi/ERC20.json";
 import { ARENA_ADDRESSES, parseUSDC, ENTRY_FEE_OPTIONS, MAX_PLAYERS_OPTIONS, getChainName, CHAIN_IDS, USDC_ADDRESSES } from "@/lib/contracts";
@@ -141,6 +141,8 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     }
   }, [isSuccess, txHash, step, refetchAllowance, entryFeeWei]);
 
+  const { switchChainAsync } = useSwitchChain();
+
   async function handleApprove() {
     if (!address || !feeToUse) return;
 
@@ -151,6 +153,17 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     if (!feeToUse || isNaN(feeNum) || feeNum <= 0) {
       setError("Please enter a valid entry fee");
       return;
+    }
+
+    // Switch chain if needed
+    if (connectedChainId !== selectedChain) {
+      try {
+        await switchChainAsync({ chainId: selectedChain });
+      } catch (err) {
+        console.error('Failed to switch chain:', err);
+        setError("Please switch to the correct network to continue.");
+        return;
+      }
     }
 
     setIsCreating(true);
@@ -232,6 +245,17 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     if (!feeToUse || isNaN(feeNum) || feeNum <= 0) {
       setError("Please enter a valid entry fee");
       return;
+    }
+
+    // Switch chain if needed
+    if (connectedChainId !== selectedChain) {
+      try {
+        await switchChainAsync({ chainId: selectedChain });
+      } catch (err) {
+        console.error('Failed to switch chain:', err);
+        setError("Please switch to the correct network to continue.");
+        return;
+      }
     }
 
     if (feeNum > 10000) {
