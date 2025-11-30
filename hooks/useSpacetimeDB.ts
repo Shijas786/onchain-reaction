@@ -1,278 +1,194 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { SpacetimeDBClient, Identity } from "@clockworklabs/spacetimedb-sdk";
-import {
-  getSpacetimeClient,
-  connectToSpacetimeDB,
-  disconnectFromSpacetimeDB,
-  isConnected as checkConnected,
-} from "@/lib/spacetimedb/client";
-import {
-  Lobby,
-  LobbyPlayer,
-  GameState,
-  Board,
-  parseBoard,
-} from "@/lib/spacetimedb/types";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useLocalGame } from "./useLocalGame";
+import type { Lobby, LobbyPlayer, GameState, Board } from "@/lib/spacetimedb/types";
 
-// Connection status
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
-/**
- * Hook for SpacetimeDB connection management
- */
+const DEFAULT_CHAIN_ID = 8453;
+const MOCK_HOST_ADDRESS = "0xHostAddress";
+const MOCK_ARENA = "0xMockArena";
+
+const nowBigInt = () => BigInt(Date.now());
+
+const createMockLobby = (lobbyId: string): Lobby => ({
+  id: lobbyId,
+  chainId: DEFAULT_CHAIN_ID,
+  matchId: BigInt(lobbyId.replace(/\D/g, "") || Date.now()),
+  arenaAddress: MOCK_ARENA,
+  hostIdentity: "player-0",
+  hostAddress: MOCK_HOST_ADDRESS,
+  entryFee: (1_000_000).toString(),
+  maxPlayers: 4,
+  status: "waiting",
+  winnerIdentity: "",
+  winnerAddress: "",
+  createdAt: nowBigInt(),
+  updatedAt: nowBigInt(),
+});
+
 export function useSpacetimeConnection() {
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+  const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [identity, setIdentity] = useState<string | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const clientRef = useRef<SpacetimeDBClient | null>(null);
 
-  const connect = useCallback(async () => {
-    if (status === "connecting" || status === "connected") return;
-    
-    setStatus("connecting");
-    setError(null);
-    
-    try {
-      const client = await connectToSpacetimeDB();
-      clientRef.current = client;
-      setIdentity(client.identity?.toHexString() || null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
       setStatus("connected");
-    } catch (err) {
-      setError(err as Error);
-      setStatus("error");
-    }
-  }, [status]);
-
-  const disconnect = useCallback(() => {
-    disconnectFromSpacetimeDB();
-    clientRef.current = null;
-    setIdentity(null);
-    setStatus("disconnected");
+      setIdentity("player-0");
+    }, 200);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Auto-connect on mount
-  useEffect(() => {
-    connect();
-    return () => {
-      // Don't disconnect on unmount - keep connection alive
-    };
+  const connect = useCallback(() => {
+    setStatus("connected");
+    setIdentity("player-0");
+  }, []);
+
+  const disconnect = useCallback(() => {
+    setStatus("disconnected");
+    setIdentity(null);
   }, []);
 
   return {
     status,
     identity,
-    error,
-    client: clientRef.current,
+    error: null,
+    client: null,
     connect,
     disconnect,
     isConnected: status === "connected",
   };
 }
 
-/**
- * Hook for lobby state and actions
- */
 export function useLobby(lobbyId: string | null) {
-  const [lobby, setLobby] = useState<Lobby | null>(null);
+  const [lobby, setLobby] = useState<Lobby | null>(lobbyId ? createMockLobby(lobbyId) : null);
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { client, isConnected, identity } = useSpacetimeConnection();
+  const { isConnected, identity } = useSpacetimeConnection();
+  const { gameState: localGameState, makeMove: localMakeMove } = useLocalGame(2);
+  const moveCounterRef = useRef(0);
 
-  // Subscribe to lobby updates
   useEffect(() => {
-    if (!client || !isConnected || !lobbyId) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-
-    // Subscribe to tables
-    // Note: Actual subscription syntax depends on generated client code
-    // This is a placeholder showing the intended usage pattern
-    
-    const unsubscribeLobby = client.db.lobby?.onInsert((row: Lobby) => {
-      if (row.id === lobbyId) setLobby(row);
-    });
-    
-    const unsubscribeLobbyUpdate = client.db.lobby?.onUpdate((oldRow: Lobby, newRow: Lobby) => {
-      if (newRow.id === lobbyId) setLobby(newRow);
-    });
-
-    const unsubscribePlayers = client.db.lobbyPlayer?.onInsert((row: LobbyPlayer) => {
-      if (row.lobbyId === lobbyId) {
-        setPlayers(prev => [...prev.filter(p => p.id !== row.id), row]);
-      }
-    });
-
-    const unsubscribePlayersUpdate = client.db.lobbyPlayer?.onUpdate((oldRow: LobbyPlayer, newRow: LobbyPlayer) => {
-      if (newRow.lobbyId === lobbyId) {
-        setPlayers(prev => prev.map(p => p.id === newRow.id ? newRow : p));
-      }
-    });
-
-    const unsubscribePlayersDelete = client.db.lobbyPlayer?.onDelete((row: LobbyPlayer) => {
-      if (row.lobbyId === lobbyId) {
-        setPlayers(prev => prev.filter(p => p.id !== row.id));
-      }
-    });
-
-    const unsubscribeGameState = client.db.gameState?.onInsert((row: GameState) => {
-      if (row.lobbyId === lobbyId) {
-        setGameState(row);
-        setBoard(parseBoard(row.boardJson));
-      }
-    });
-
-    const unsubscribeGameStateUpdate = client.db.gameState?.onUpdate((oldRow: GameState, newRow: GameState) => {
-      if (newRow.lobbyId === lobbyId) {
-        setGameState(newRow);
-        setBoard(parseBoard(newRow.boardJson));
-      }
-    });
-
-    // Query initial data
-    // This would use the generated query methods
+    if (!lobbyId) return;
+    setLobby(createMockLobby(lobbyId));
     setIsLoading(false);
+  }, [lobbyId]);
 
-    return () => {
-      unsubscribeLobby?.();
-      unsubscribeLobbyUpdate?.();
-      unsubscribePlayers?.();
-      unsubscribePlayersUpdate?.();
-      unsubscribePlayersDelete?.();
-      unsubscribeGameState?.();
-      unsubscribeGameStateUpdate?.();
-    };
-  }, [client, isConnected, lobbyId]);
+  useEffect(() => {
+    if (!lobby || !lobbyId) return;
 
-  // Actions
-  const createLobby = useCallback(async (
-    chainId: number,
-    matchId: bigint,
-    arenaAddress: string,
-    hostAddress: string,
-    entryFee: string,
-    maxPlayers: number,
-    hostName: string
-  ): Promise<string | null> => {
-    if (!client || !isConnected) return null;
-    
-    try {
-      // Call reducer
-      const result = await client.reducers.createLobby(
-        chainId,
-        matchId,
-        arenaAddress,
-        hostAddress,
-        entryFee,
-        maxPlayers,
-        hostName
-      );
-      return result as string;
-    } catch (err) {
-      console.error("Failed to create lobby:", err);
-      return null;
-    }
-  }, [client, isConnected]);
+    const nextPlayers: LobbyPlayer[] = localGameState.players.map((player, index) => ({
+      id: `${lobbyId}_${index}`,
+      lobbyId,
+      identity: `player-${index}`,
+      address: index === 0 ? MOCK_HOST_ADDRESS : `0xPlayer${index}`,
+      name: player.name,
+      color: player.color,
+      isHost: index === 0,
+      isAlive: player.isAlive !== false,
+      hasDeposited: true,
+      joinedAt: nowBigInt(),
+    }));
 
-  const joinLobby = useCallback(async (
-    targetLobbyId: string,
-    playerAddress: string,
-    playerName: string
-  ): Promise<boolean> => {
-    if (!client || !isConnected) return false;
-    
-    try {
-      await client.reducers.joinLobby(targetLobbyId, playerAddress, playerName);
+    setPlayers(nextPlayers);
+
+    const boardCopy: Board = localGameState.board.map(row =>
+      row.map(cell => ({
+        orbs: cell.count,
+        owner: cell.owner ?? null,
+      }))
+    );
+
+    setBoard(boardCopy);
+    setGameState({
+      lobbyId,
+      boardJson: JSON.stringify(boardCopy),
+      currentPlayerIndex: localGameState.currentPlayerIndex,
+      isAnimating: localGameState.isAnimating,
+      moveCount: moveCounterRef.current++,
+      lastMoveAt: nowBigInt(),
+    });
+
+    setLobby(prev => {
+      if (!prev) return prev;
+      const winner = localGameState.winner;
+      const winnerIndex = winner
+        ? localGameState.players.findIndex(p => p.id === winner.id)
+        : -1;
+      return {
+        ...prev,
+        status: winner ? "finished" : "live",
+        winnerIdentity: winnerIndex >= 0 ? `player-${winnerIndex}` : "",
+        winnerAddress: winnerIndex >= 0 ? `0xPlayer${winnerIndex}` : "",
+        updatedAt: nowBigInt(),
+      };
+    });
+  }, [
+    lobby,
+    lobbyId,
+    localGameState.board,
+    localGameState.currentPlayerIndex,
+    localGameState.isAnimating,
+    localGameState.players,
+    localGameState.winner,
+  ]);
+
+  const currentPlayer = useMemo(
+    () => players.find(p => p.identity === identity) ?? players[0] ?? null,
+    [players, identity]
+  );
+
+  const alivePlayers = useMemo(() => players.filter(p => p.isAlive), [players]);
+
+  const currentTurnPlayer = useMemo(() => {
+    if (!gameState || alivePlayers.length === 0) return null;
+    return alivePlayers[gameState.currentPlayerIndex % alivePlayers.length] ?? null;
+  }, [alivePlayers, gameState]);
+
+  const isMyTurn = useMemo(() => {
+    if (!currentTurnPlayer) return false;
+    return currentTurnPlayer.identity === identity;
+  }, [currentTurnPlayer, identity]);
+
+  const createLobby = useCallback(async () => {
+    const newId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setLobby(createMockLobby(newId));
+    return newId;
+  }, []);
+
+  const joinLobby = useCallback(async () => true, []);
+  const confirmDeposit = useCallback(async () => true, []);
+  const startGame = useCallback(async () => true, []);
+
+  const makeMove = useCallback(
+    async (row: number, col: number) => {
+      if (!isConnected) return false;
+      localMakeMove(row, col);
       return true;
-    } catch (err) {
-      console.error("Failed to join lobby:", err);
-      return false;
-    }
-  }, [client, isConnected]);
+    },
+    [isConnected, localMakeMove]
+  );
 
-  const confirmDeposit = useCallback(async (
-    targetLobbyId: string,
-    playerAddress: string
-  ): Promise<boolean> => {
-    if (!client || !isConnected) return false;
-    
-    try {
-      await client.reducers.confirmDeposit(targetLobbyId, playerAddress);
-      return true;
-    } catch (err) {
-      console.error("Failed to confirm deposit:", err);
-      return false;
-    }
-  }, [client, isConnected]);
-
-  const startGame = useCallback(async (): Promise<boolean> => {
-    if (!client || !isConnected || !lobbyId) return false;
-    
-    try {
-      await client.reducers.startGame(lobbyId);
-      return true;
-    } catch (err) {
-      console.error("Failed to start game:", err);
-      return false;
-    }
-  }, [client, isConnected, lobbyId]);
-
-  const makeMove = useCallback(async (row: number, col: number): Promise<boolean> => {
-    if (!client || !isConnected || !lobbyId) return false;
-    
-    try {
-      await client.reducers.makeMove(lobbyId, row, col);
-      return true;
-    } catch (err) {
-      console.error("Failed to make move:", err);
-      return false;
-    }
-  }, [client, isConnected, lobbyId]);
-
-  const leaveLobby = useCallback(async (): Promise<boolean> => {
-    if (!client || !isConnected || !lobbyId) return false;
-    
-    try {
-      await client.reducers.leaveLobby(lobbyId);
-      return true;
-    } catch (err) {
-      console.error("Failed to leave lobby:", err);
-      return false;
-    }
-  }, [client, isConnected, lobbyId]);
-
-  // Derived state
-  const currentPlayer = players.find(p => p.identity === identity);
-  const isHost = currentPlayer?.isHost || false;
-  const isMyTurn = gameState 
-    ? players.filter(p => p.isAlive)[gameState.currentPlayerIndex]?.identity === identity
-    : false;
-  const alivePlayers = players.filter(p => p.isAlive);
-  const currentTurnPlayer = gameState 
-    ? alivePlayers[gameState.currentPlayerIndex % alivePlayers.length]
-    : null;
+  const leaveLobby = useCallback(async () => {
+    setLobby(prev => (prev ? { ...prev, status: "cancelled" } : prev));
+    return true;
+  }, []);
 
   return {
-    // State
     lobby,
     players,
     gameState,
     board,
     isLoading,
-    // Derived
     currentPlayer,
-    isHost,
+    isHost: currentPlayer?.isHost ?? false,
     isMyTurn,
     currentTurnPlayer,
     alivePlayers,
-    // Actions
     createLobby,
     joinLobby,
     confirmDeposit,
@@ -282,54 +198,12 @@ export function useLobby(lobbyId: string | null) {
   };
 }
 
-/**
- * Hook for listing available lobbies
- */
 export function useLobbyList() {
-  const [lobbies, setLobbies] = useState<Lobby[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const { client, isConnected } = useSpacetimeConnection();
-
-  useEffect(() => {
-    if (!client || !isConnected) {
-      setIsLoading(false);
-      return;
-    }
-
-    // Subscribe to lobby table
-    const unsubscribe = client.db.lobby?.onInsert((row: Lobby) => {
-      if (row.status === "waiting") {
-        setLobbies(prev => [...prev.filter(l => l.id !== row.id), row]);
-      }
-    });
-
-    const unsubscribeUpdate = client.db.lobby?.onUpdate((oldRow: Lobby, newRow: Lobby) => {
-      if (newRow.status === "waiting") {
-        setLobbies(prev => prev.map(l => l.id === newRow.id ? newRow : l));
-      } else {
-        // Remove from list if no longer waiting
-        setLobbies(prev => prev.filter(l => l.id !== newRow.id));
-      }
-    });
-
-    const unsubscribeDelete = client.db.lobby?.onDelete((row: Lobby) => {
-      setLobbies(prev => prev.filter(l => l.id !== row.id));
-    });
-
-    setIsLoading(false);
-
-    return () => {
-      unsubscribe?.();
-      unsubscribeUpdate?.();
-      unsubscribeDelete?.();
-    };
-  }, [client, isConnected]);
+  const [lobbies] = useState<Lobby[]>([createMockLobby("ABCD")]);
 
   return {
     lobbies,
-    isLoading,
-    waitingLobbies: lobbies.filter(l => l.status === "waiting"),
+    isLoading: false,
+    waitingLobbies: lobbies,
   };
 }
-

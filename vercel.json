@@ -3,11 +3,6 @@
   "framework": "nextjs",
   "devCommand": "npm run dev",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "env": {
-    "NEXT_PUBLIC_PROJECT_ID": "@next_public_project_id",
-    "NEXT_PUBLIC_SPACETIMEDB_HOST": "@next_public_spacetimedb_host",
-    "NEXT_PUBLIC_SPACETIMEDB_MODULE": "@next_public_spacetimedb_module"
-  }
+  "outputDirectory": ".next"
 }
 

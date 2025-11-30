@@ -11,6 +11,7 @@ import { parseBoard, PlayerColor } from "@/lib/spacetimedb/types";
 import { getChainName, formatUSDC } from "@/lib/contracts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Board, Player, PlayerColor as GamePlayerColor } from "@/types/game";
+import { createBoard } from "@/lib/gameLogic";
 
 function OnlineGameContent() {
   const params = useParams();
@@ -45,14 +46,13 @@ function OnlineGameContent() {
   // Convert SpacetimeDB board to game board format
   const gameBoard = useMemo((): Board => {
     if (!spacetimeBoard) {
-      // Return empty board
-      return Array(9).fill(null).map(() =>
-        Array(6).fill(null).map(() => ({ orbs: 0, owner: null }))
-      );
+      return createBoard();
     }
-    return spacetimeBoard.map(row =>
-      row.map(cell => ({
-        orbs: cell.orbs,
+    return spacetimeBoard.map((row, rowIndex) =>
+      row.map((cell, colIndex) => ({
+        row: rowIndex,
+        col: colIndex,
+        count: cell.orbs,
         owner: cell.owner as GamePlayerColor | null,
       }))
     );
@@ -222,7 +222,6 @@ function OnlineGameContent() {
           animating={gameState?.isAnimating || false}
           explosionQueue={explosionQueue}
           clearExplosionQueue={() => setExplosionQueue([])}
-          disabled={!isMyTurn || lobby.status !== "live"}
         />
         
         {/* Overlay when not your turn */}

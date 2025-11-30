@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState, useMemo } from "react";
+import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Board, Cell, PlayerColor, ROWS, COLS } from "@/types/game";
 import { getMaxCapacity, getNeighbors } from "@/lib/gameLogic";
 import { soundManager } from "@/lib/sound";
@@ -156,7 +156,13 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         }
     }, [explosionQueue, clearExplosionQueue, board]);
 
-    const drawOrbShape = (ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, color: PlayerColor) => {
+    const drawOrbShape = useCallback((
+        ctx: CanvasRenderingContext2D,
+        x: number,
+        y: number,
+        scale: number,
+        color: PlayerColor
+    ) => {
         const radius = ORB_RADIUS * scale;
         const baseColor = COLORS[color];
 
@@ -176,9 +182,9 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         ctx.beginPath();
         ctx.arc(x, y, radius * 0.7, Math.PI * 1.1, Math.PI * 1.6);
         ctx.stroke();
-    };
+    }, []);
 
-    const drawOrbGroup = (
+    const drawOrbGroup = useCallback((
         ctx: CanvasRenderingContext2D,
         cx: number,
         cy: number,
@@ -232,7 +238,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             });
             return;
         }
-    };
+    }, [drawOrbShape]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -398,7 +404,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         render(performance.now());
 
         return () => cancelAnimationFrame(animationFrameId);
-    }, [board]);
+    }, [board, drawOrbGroup, drawOrbShape]);
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (animating) return;

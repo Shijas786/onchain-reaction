@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { useAccount, useReadContract } from "wagmi";
 import { Button } from "@/components/ui/Button";
 import { DoodleBackground } from "@/components/ui/DoodleBackground";
@@ -197,10 +198,13 @@ function LobbyContent() {
                     : "bg-slate-50 border-slate-100"
                 }`}
               >
-                <img
+                <Image
                   src={player.avatar}
                   alt={player.name}
-                  className="w-12 h-12 rounded-full border-2 border-white shadow-sm"
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 rounded-full border-2 border-white shadow-sm object-cover"
+                  unoptimized
                 />
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-slate-800 flex items-center gap-2">

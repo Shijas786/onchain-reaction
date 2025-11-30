@@ -182,7 +182,7 @@ export default function PrizesPage() {
               <p className="font-bold">How Prize Claims Work</p>
               <p className="text-blue-600 mt-1">
                 When you win a match, the prize pool is held in an escrow smart contract.
-                Click "Claim" to transfer your winnings directly to your wallet.
+                Click &quot;Claim&quot; to transfer your winnings directly to your wallet.
               </p>
             </div>
           </div>
