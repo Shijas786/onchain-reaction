@@ -504,7 +504,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     };
 
     return (
-        <div className="flex justify-center items-center p-4">
+        <div className="flex justify-center items-center p-2 w-full max-w-full overflow-hidden">
             <canvas
                 ref={canvasRef}
                 width={canvasWidth}
@@ -513,13 +513,15 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 className="cursor-pointer touch-none"
                 style={{
                     width: '100%',
-                    maxWidth: `${Math.min(canvasWidth, 1200)}px`,
+                    maxWidth: 'min(100vw - 2rem, 1200px)',
+                    maxHeight: '60vh',
                     height: 'auto',
                     aspectRatio: `${canvasWidth} / ${canvasHeight}`,
-                    background: 'transparent', // Let parent bg show
+                    background: 'transparent',
                     borderRadius: '24px',
-                    border: '4px solid #000000', // Comic border
-                    boxShadow: '8px 8px 0px rgba(0,0,0,0.1)' // Flat shadow
+                    border: '4px solid #000000',
+                    boxShadow: '8px 8px 0px rgba(0,0,0,0.1)',
+                    objectFit: 'contain',
                 }}
             />
         </div>

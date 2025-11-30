@@ -73,12 +73,14 @@ function OnlineGameContent() {
 
   // Convert SpacetimeDB players to game players
   const gamePlayers = useMemo((): Player[] => {
-    return players.map(p => ({
+    const mapped = players.map(p => ({
       id: p.identity?.toHexString?.() || p.id,
       name: p.name,
       color: p.color as GamePlayerColor,
       isAlive: p.isAlive,
     }));
+    console.log('Game Players:', mapped.length, mapped.map(p => ({ name: p.name, color: p.color })));
+    return mapped;
   }, [players]);
 
   // Check for winner
@@ -151,7 +153,7 @@ function OnlineGameContent() {
   return (
     <>
       {/* Header */}
-      <div className="w-full max-w-lg space-y-4 mb-4 px-4">
+      <div className="w-full max-w-4xl space-y-4 mb-4 px-4">
         {/* Top bar */}
         <div className="flex justify-between items-center">
           <Button
@@ -181,8 +183,8 @@ function OnlineGameContent() {
         </div>
 
         {/* Player turn indicator */}
-        <div className="flex items-center justify-center gap-3 py-2">
-          {gamePlayers.map((player, index) => (
+        <div className="flex items-center justify-center gap-2 py-2 flex-wrap max-w-full overflow-x-auto">
+          {gamePlayers.length > 0 ? gamePlayers.map((player, index) => (
             <div
               key={player.id}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
@@ -203,7 +205,7 @@ function OnlineGameContent() {
                   "bg-cyan-500"
                 }`}
               />
-              <span className="text-white text-sm font-medium truncate max-w-[60px]">
+              <span className="text-white text-xs font-medium truncate max-w-[50px]">
                 {player.name}
               </span>
               {currentTurnPlayer?.identity?.toHexString?.() === player.id && (
@@ -212,7 +214,9 @@ function OnlineGameContent() {
                 </span>
               )}
             </div>
-          ))}
+          )) : (
+            <div className="text-white text-sm">No players loaded...</div>
+          )}
         </div>
 
         {/* Your turn indicator */}
