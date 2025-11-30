@@ -21,11 +21,11 @@ const TILT_ANGLE = 0; // Radians (0 for top-down 2D)
 const FOV = 800; // Field of view (focal length)
 const CAMERA_Z = 600; // Distance from camera to center of board
 const CAMERA_Y_OFFSET = 0; // Centered vertically
-const MIN_CANVAS_WIDTH = 800;
-const MIN_CANVAS_HEIGHT = 600;
-const MAX_CANVAS_WIDTH = 1400; // Increased for larger boards
-const MAX_CANVAS_HEIGHT = 1200; // Increased for larger boards
-const PADDING = 150; // Increased padding to ensure corners are visible
+const MIN_CANVAS_WIDTH = 1000;
+const MIN_CANVAS_HEIGHT = 800;
+const MAX_CANVAS_WIDTH = 1800; // Increased for larger boards on desktop
+const MAX_CANVAS_HEIGHT = 1600; // Increased for larger boards on desktop
+const PADDING = 100; // Reduced padding to make board larger
 
 const ORB_RADIUS = 18;
 
@@ -504,7 +504,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     };
 
     return (
-        <div className="flex justify-center items-center p-1 sm:p-2 w-full max-w-full overflow-hidden">
+        <div className="flex justify-center items-center p-0 w-full max-w-full overflow-hidden">
             <canvas
                 ref={canvasRef}
                 width={canvasWidth}
@@ -513,14 +513,14 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 className="cursor-pointer touch-none"
                 style={{
                     width: '100%',
-                    maxWidth: 'min(100vw - 0.5rem, 1400px)', // Less padding on mobile
-                    maxHeight: 'calc(100vh - 120px)', // Use most of viewport height, leave space for header
+                    maxWidth: 'min(100vw - 1rem, 1800px)', // Larger on desktop
+                    maxHeight: 'calc(100vh - 100px)', // Use more viewport height
                     height: 'auto',
                     aspectRatio: `${canvasWidth} / ${canvasHeight}`,
                     background: 'transparent',
-                    borderRadius: '16px',
-                    border: '3px solid #000000',
-                    boxShadow: '8px 8px 0px rgba(0,0,0,0.1)',
+                    borderRadius: '0px', // Remove border radius
+                    border: 'none', // Remove outer border
+                    boxShadow: 'none', // Remove shadow
                     objectFit: 'contain',
                 }}
             />

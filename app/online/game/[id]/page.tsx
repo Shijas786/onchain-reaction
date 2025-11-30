@@ -238,7 +238,7 @@ function OnlineGameContent() {
       </div>
 
       {/* Game Board */}
-      <div className="relative p-0 sm:p-1 rounded-2xl overflow-hidden shadow-2xl flex-grow flex items-center justify-center min-h-0">
+      <div className="relative p-0 overflow-hidden flex-grow flex items-center justify-center min-h-0">
         <BoardRenderer
           board={gameBoard}
           rows={gameState?.rows || 9}
