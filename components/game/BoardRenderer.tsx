@@ -115,6 +115,16 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         const dx = sx - cx;
         const dy = sy - cy;
 
+        // For 2D (TILT_ANGLE = 0), simplify the calculation
+        if (TILT_ANGLE === 0) {
+            // Direct 2D mapping: scale = FOV / CAMERA_Z
+            const scale = FOV / CAMERA_Z;
+            const X = dx / scale;
+            const Y = (dy - CAMERA_Y_OFFSET * scale) / scale;
+            return { x: X, y: Y };
+        }
+
+        // 3D case (if TILT_ANGLE != 0)
         const cosT = Math.cos(TILT_ANGLE);
         const sinT = Math.sin(TILT_ANGLE);
 
@@ -449,31 +459,37 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (animating) return;
 
-        const rect = canvasRef.current?.getBoundingClientRect();
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
         if (!rect) return;
 
+        // Get click position relative to canvas
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Map screen X/Y to Canvas internal resolution
-        // (Assuming canvas width/height matches display size for now, or use scale)
-        // If canvas is styled with CSS width/height, we need to scale.
-        const scaleX = canvasRef.current!.width / rect.width;
-        const scaleY = canvasRef.current!.height / rect.height;
+        // Map screen coordinates to canvas internal coordinates
+        // Account for CSS scaling (canvas might be scaled down)
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
 
         const sx = x * scaleX;
         const sy = y * scaleY;
 
-        const worldPos = unproject(sx, sy, canvasRef.current!.width, canvasRef.current!.height);
+        // Unproject to world coordinates
+        const worldPos = unproject(sx, sy, canvas.width, canvas.height);
 
-        // Convert World Pos to Row/Col
-        // xWorld = (c - COLS/2 + 0.5) * cellSize  <-- Wait, grid lines are at integers
-        // Grid lines: (c - COLS/2) * cellSize
-        // So cell 0 is from -COLS/2 to -COLS/2 + 1
-
+        // Convert world coordinates to row/col
+        // Board is centered at (0,0) in world space
+        // Cell (r, c) center is at:
+        //   x = (c - cols/2 + 0.5) * cellSize
+        //   y = (r - rows/2 + 0.5) * cellSize
+        // Solving for c and r:
         const c = Math.floor(worldPos.x / cellSize + cols / 2);
         const r = Math.floor(worldPos.y / cellSize + rows / 2);
 
+        // Validate bounds
         if (r >= 0 && r < rows && c >= 0 && c < cols) {
             onCellClick(r, c);
         }
@@ -488,8 +504,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 onClick={handleCanvasClick}
                 className="cursor-pointer touch-none"
                 style={{
-                    maxWidth: '100%',
+                    width: '100%',
+                    maxWidth: `${Math.min(canvasWidth, 1200)}px`,
                     height: 'auto',
+                    aspectRatio: `${canvasWidth} / ${canvasHeight}`,
                     background: 'transparent', // Let parent bg show
                     borderRadius: '24px',
                     border: '4px solid #000000', // Comic border
