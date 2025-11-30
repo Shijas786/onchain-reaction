@@ -171,11 +171,14 @@ export function useLobby(lobbyId: string | null) {
         }
 
         const playersData = Array.from(ctx.db.lobbyPlayer.lobby_id.filter(lobbyId));
-        setPlayers(playersData.map(p => ({
+        console.log(`[useLobby] Loaded ${playersData.length} players from SpacetimeDB for lobby ${lobbyId}:`, playersData.map(p => ({ id: p.id, name: p.name, color: p.color })));
+        const mappedPlayers = playersData.map(p => ({
           ...p as unknown as LobbyPlayer,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`,
           farcasterHandle: `@${p.name.toLowerCase().replace(/\s+/g, '')}`,
-        })));
+        }));
+        console.log(`[useLobby] Mapped players:`, mappedPlayers.length, mappedPlayers.map(p => ({ name: p.name, color: p.color })));
+        setPlayers(mappedPlayers);
 
         const gameData = ctx.db.gameState.lobby_id.find(lobbyId);
         if (gameData) {

@@ -513,8 +513,8 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 className="cursor-pointer touch-none"
                 style={{
                     width: '100%',
-                    maxWidth: 'min(100vw - 2rem, 1200px)',
-                    maxHeight: '60vh',
+                    maxWidth: 'min(100vw - 2rem, 1400px)',
+                    maxHeight: '80vh',
                     height: 'auto',
                     aspectRatio: `${canvasWidth} / ${canvasHeight}`,
                     background: 'transparent',

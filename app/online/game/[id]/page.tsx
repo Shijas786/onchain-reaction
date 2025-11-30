@@ -73,13 +73,14 @@ function OnlineGameContent() {
 
   // Convert SpacetimeDB players to game players
   const gamePlayers = useMemo((): Player[] => {
+    console.log(`[OnlineGame] Raw players array:`, players.length, players.map(p => ({ id: p.id, name: p.name, color: p.color })));
     const mapped = players.map(p => ({
       id: p.identity?.toHexString?.() || p.id,
       name: p.name,
       color: p.color as GamePlayerColor,
       isAlive: p.isAlive,
     }));
-    console.log('Game Players:', mapped.length, mapped.map(p => ({ name: p.name, color: p.color })));
+    console.log(`[OnlineGame] Mapped gamePlayers:`, mapped.length, mapped.map(p => ({ name: p.name, color: p.color, isAlive: p.isAlive })));
     return mapped;
   }, [players]);
 
@@ -183,8 +184,12 @@ function OnlineGameContent() {
         </div>
 
         {/* Player turn indicator */}
-        <div className="flex items-center justify-center gap-2 py-2 flex-wrap max-w-full overflow-x-auto">
-          {gamePlayers.length > 0 ? gamePlayers.map((player, index) => (
+        <div className="flex flex-col gap-2">
+          <div className="text-center text-xs text-slate-400">
+            Players ({gamePlayers.length}/{lobby?.maxPlayers || 0}): {gamePlayers.map(p => p.name).join(', ')}
+          </div>
+          <div className="flex items-center justify-center gap-2 py-2 flex-wrap max-w-full overflow-x-auto">
+            {gamePlayers.length > 0 ? gamePlayers.map((player, index) => (
             <div
               key={player.id}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
@@ -217,6 +222,7 @@ function OnlineGameContent() {
           )) : (
             <div className="text-white text-sm">No players loaded...</div>
           )}
+          </div>
         </div>
 
         {/* Your turn indicator */}
