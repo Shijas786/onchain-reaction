@@ -1,39 +1,34 @@
-// Frontend client helpers for OnchainReaction contract
-// These are convenience wrappers around wagmi hooks
+// src/lib/onchainReactionClient.ts
 
 import { createPublicClient, createWalletClient, http } from "viem";
 import { base, arbitrum } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { onchainReactionAbi } from "./onchainReaction";
 
-// For frontend, you'll usually be using wagmi hooks instead.
-// This is more for server actions / scripts.
+// for frontend, you'll usually be using wagmi hooks instead.
+// this is more for server actions / scripts.
 export function getPublicClient(chain: "base" | "arbitrum") {
-  const chainConfig = chain === "base" ? base : arbitrum;
-  
   return createPublicClient({
-    chain: chainConfig,
+    chain: chain === "base" ? base : arbitrum,
     transport: http(),
   });
 }
 
-export function getWalletClient(chain: "base" | "arbitrum", privateKey?: `0x${string}`) {
-  if (!privateKey) {
-    throw new Error("Private key required for wallet client");
+export function getWalletClient(chain: "base" | "arbitrum") {
+  // Use a dummy PK if not provided, or handle error
+  const pk = process.env.NEXT_PUBLIC_DUMMY_PK as `0x${string}`;
+  if (!pk) {
+    console.warn("NEXT_PUBLIC_DUMMY_PK not set, wallet client will fail if used for signing");
   }
 
-  const account = privateKeyToAccount(privateKey);
-  const chainConfig = chain === "base" ? base : arbitrum;
+  const account = pk ? privateKeyToAccount(pk) : undefined;
 
   return createWalletClient({
-    chain: chainConfig,
+    chain: chain === "base" ? base : arbitrum,
     transport: http(),
     account,
   });
 }
-
-// UI Helper functions - these use wallet client directly
-// In React, use wagmi hooks instead (useWriteContract, useReadContract)
 
 export async function uiCreateMatch({
   chain,
@@ -41,20 +36,22 @@ export async function uiCreateMatch({
   token,
   entryFee,
   maxPlayers,
-  walletClient,
 }: {
   chain: "base" | "arbitrum";
-  contract: `0x${string}`;
+  contract: `0x${string}`; // OnchainReaction address on that chain
   token: `0x${string}`;
   entryFee: bigint;
   maxPlayers: number;
-  walletClient: ReturnType<typeof getWalletClient>;
 }) {
+  const walletClient = getWalletClient(chain);
+  if (!walletClient.account) throw new Error("No account configured for wallet client");
+
   const hash = await walletClient.writeContract({
     address: contract,
     abi: onchainReactionAbi,
     functionName: "createMatch",
     args: [token, entryFee, BigInt(maxPlayers)],
+    account: walletClient.account,
   });
 
   return hash;
@@ -64,18 +61,20 @@ export async function uiJoinMatch({
   chain,
   contract,
   matchId,
-  walletClient,
 }: {
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  walletClient: ReturnType<typeof getWalletClient>;
 }) {
+  const walletClient = getWalletClient(chain);
+  if (!walletClient.account) throw new Error("No account configured for wallet client");
+
   const hash = await walletClient.writeContract({
     address: contract,
     abi: onchainReactionAbi,
     functionName: "joinMatch",
     args: [matchId],
+    account: walletClient.account,
   });
 
   return hash;
@@ -85,13 +84,16 @@ export async function uiLeaveMatch(params: {
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  walletClient: ReturnType<typeof getWalletClient>;
 }) {
-  const hash = await params.walletClient.writeContract({
+  const walletClient = getWalletClient(params.chain);
+  if (!walletClient.account) throw new Error("No account configured for wallet client");
+
+  const hash = await walletClient.writeContract({
     address: params.contract,
     abi: onchainReactionAbi,
     functionName: "leaveMatch",
     args: [params.matchId],
+    account: walletClient.account,
   });
 
   return hash;
@@ -101,13 +103,16 @@ export async function uiStartMatch(params: {
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  walletClient: ReturnType<typeof getWalletClient>;
 }) {
-  const hash = await params.walletClient.writeContract({
+  const walletClient = getWalletClient(params.chain);
+  if (!walletClient.account) throw new Error("No account configured for wallet client");
+
+  const hash = await walletClient.writeContract({
     address: params.contract,
     abi: onchainReactionAbi,
     functionName: "startMatch",
     args: [params.matchId],
+    account: walletClient.account,
   });
 
   return hash;
@@ -117,13 +122,16 @@ export async function uiClaimPrize(params: {
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  walletClient: ReturnType<typeof getWalletClient>;
 }) {
-  const hash = await params.walletClient.writeContract({
+  const walletClient = getWalletClient(params.chain);
+  if (!walletClient.account) throw new Error("No account configured for wallet client");
+
+  const hash = await walletClient.writeContract({
     address: params.contract,
     abi: onchainReactionAbi,
     functionName: "claimPrize",
     args: [params.matchId],
+    account: walletClient.account,
   });
 
   return hash;
@@ -133,55 +141,19 @@ export async function uiGetMatch({
   chain,
   contract,
   matchId,
-  publicClient,
 }: {
   chain: "base" | "arbitrum";
   contract: `0x${string}`;
   matchId: bigint;
-  publicClient?: ReturnType<typeof getPublicClient>;
 }) {
-  const client = publicClient || getPublicClient(chain);
+  const publicClient = getPublicClient(chain);
 
-  const match = await client.readContract({
+  const match = await publicClient.readContract({
     address: contract,
     abi: onchainReactionAbi,
     functionName: "matches",
     args: [matchId],
   });
 
-  return match as [
-    string, // host
-    string, // token
-    bigint, // entryFee
-    bigint, // maxPlayers
-    bigint, // prizePool
-    number, // status
-    string, // winner
-    bigint, // createdAt
-    bigint, // expiresAt
-  ];
+  return match;
 }
-
-export async function uiGetPlayers({
-  chain,
-  contract,
-  matchId,
-  publicClient,
-}: {
-  chain: "base" | "arbitrum";
-  contract: `0x${string}`;
-  matchId: bigint;
-  publicClient?: ReturnType<typeof getPublicClient>;
-}) {
-  const client = publicClient || getPublicClient(chain);
-
-  const players = await client.readContract({
-    address: contract,
-    abi: onchainReactionAbi,
-    functionName: "getPlayers",
-    args: [matchId],
-  });
-
-  return players as `0x${string}`[];
-}
-

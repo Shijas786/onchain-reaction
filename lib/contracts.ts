@@ -13,6 +13,8 @@ export const USDC_ADDRESSES: Record<number, `0x${string}`> = {
   [CHAIN_IDS.ARBITRUM]: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Arbitrum USDC
 }
 
+export const BASE_JESSE = "0x50F88fe97f72CD3E75b9Eb4f747F59BcEBA80d59";
+
 // ChainOrbArena contract addresses per chain
 export const ARENA_ADDRESSES: Record<number, `0x${string}`> = {
   [CHAIN_IDS.BASE]: '0xCEeeA562C831f7688851f093d7012fAc8D8302D5', // Base mainnet
