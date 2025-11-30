@@ -14,9 +14,8 @@ export const USDC_ADDRESSES: Record<number, `0x${string}`> = {
 }
 
 // ChainOrbArena contract addresses per chain
-// TODO: Replace with your deployed contract addresses
 export const ARENA_ADDRESSES: Record<number, `0x${string}`> = {
-  [CHAIN_IDS.BASE]: '0x0000000000000000000000000000000000000000', // Deploy and update
+  [CHAIN_IDS.BASE]: '0xCEeeA562C831f7688851f093d7012fAc8D8302D', // Base mainnet
   [CHAIN_IDS.ARBITRUM]: '0x0000000000000000000000000000000000000000', // Deploy and update
 }
 
