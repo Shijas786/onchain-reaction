@@ -128,6 +128,11 @@ ARBISCAN_API_KEY=your_arbiscan_api_key
 # USDC addresses
 USDC_BASE=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 USDC_ARBITRUM=0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+
+# Fee recipient (where 0.5% game revenue fees will be collected)
+FEE_RECIPIENT=your_fee_recipient_address_here
+# Or use owner address as fee recipient:
+# OWNER_ADDRESS=your_wallet_address_here
 ```
 
 **⚠️ WARNING:** Never share your private key! Add `.env` to `.gitignore`.
@@ -158,11 +163,19 @@ async function main() {
     throw new Error(`USDC address not configured for ${network}`);
   }
 
+  // Get fee recipient address (where 0.5% fees will be sent)
+  const feeRecipient = process.env.FEE_RECIPIENT || process.env.OWNER_ADDRESS;
+  if (!feeRecipient) {
+    throw new Error(`FEE_RECIPIENT or OWNER_ADDRESS must be set in .env`);
+  }
+
   console.log(`Using USDC address: ${usdcAddress}`);
+  console.log(`Using fee recipient: ${feeRecipient}`);
+  console.log(`Fee: 0.5% of prize pool (50 basis points)`);
 
   // Deploy contract
   const ChainOrbArena = await hre.ethers.getContractFactory("ChainOrbArena");
-  const arena = await ChainOrbArena.deploy(usdcAddress);
+  const arena = await ChainOrbArena.deploy(usdcAddress, feeRecipient);
 
   await arena.waitForDeployment();
   const address = await arena.getAddress();
@@ -181,7 +194,7 @@ async function main() {
     try {
       await hre.run("verify:verify", {
         address: address,
-        constructorArguments: [usdcAddress],
+        constructorArguments: [usdcAddress, feeRecipient],
       });
       console.log("✅ Contract verified!");
     } catch (error) {

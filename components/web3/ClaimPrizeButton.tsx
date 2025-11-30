@@ -55,6 +55,11 @@ export function ClaimPrizeButton({ prize, onSuccess }: ClaimPrizeButtonProps) {
 
   const isProcessing = isPending || isConfirming;
 
+  // Calculate prize after 0.5% fee deduction
+  const prizePoolBigInt = BigInt(prize.prizePool);
+  const fee = (prizePoolBigInt * BigInt(50)) / BigInt(10000); // 0.5% = 50 basis points
+  const netPrize = prizePoolBigInt - fee;
+
   return (
     <div className="flex flex-col items-end gap-1">
       <button
@@ -64,7 +69,7 @@ export function ClaimPrizeButton({ prize, onSuccess }: ClaimPrizeButtonProps) {
       >
         {isPending && "Confirm..."}
         {isConfirming && "Claiming..."}
-        {!isPending && !isConfirming && `Claim ${formatUSDC(prize.prizePool)} USDC`}
+        {!isPending && !isConfirming && `Claim ${formatUSDC(netPrize.toString())} USDC`}
       </button>
       {error && (
         <span className="text-[10px] text-red-500">{error}</span>
@@ -94,9 +99,14 @@ export function PrizeCard({ prize, onClaimed }: PrizeCardProps) {
           }`}>
             {getChainName(prize.chainId)}
           </span>
-          <span className="text-xs text-slate-500">
-            Prize: <span className="font-bold text-emerald-600">${formatUSDC(prize.prizePool)} USDC</span>
-          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-slate-500">
+              Prize Pool: <span className="font-bold text-emerald-600">${formatUSDC(prize.prizePool)} USDC</span>
+            </span>
+            <span className="text-[10px] text-slate-400">
+              After 0.5% fee: <span className="font-bold text-emerald-700">${formatUSDC((BigInt(prize.prizePool) - (BigInt(prize.prizePool) * BigInt(50) / BigInt(10000))).toString())} USDC</span>
+            </span>
+          </div>
         </div>
       </div>
       <ClaimPrizeButton prize={prize} onSuccess={onClaimed} />

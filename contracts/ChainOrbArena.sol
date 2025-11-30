@@ -40,6 +40,9 @@ contract ChainOrbArena is Ownable {
     mapping(uint256 => bool) public claimed;
 
     address public gameOracle;
+    address public feeRecipient;
+    uint256 public constant FEE_BPS = 50; // 0.5% = 50 basis points (out of 10000)
+    uint256 public accumulatedFees;
 
     // Events
     event MatchCreated(
@@ -72,9 +75,11 @@ contract ChainOrbArena is Ownable {
     
     event OracleUpdated(address indexed oracle);
 
-    constructor(address usdcAddress) Ownable(msg.sender) {
+    constructor(address usdcAddress, address _feeRecipient) Ownable(msg.sender) {
         require(usdcAddress != address(0), "Invalid USDC address");
+        require(_feeRecipient != address(0), "Invalid fee recipient address");
         usdc = IERC20(usdcAddress);
+        feeRecipient = _feeRecipient;
     }
 
     /**
@@ -170,9 +175,17 @@ contract ChainOrbArena is Ownable {
         claimed[matchId] = true;
         match_.status = MatchStatus.PaidOut;
 
-        usdc.safeTransfer(msg.sender, match_.prizePool);
+        // Calculate fee (0.5% of prize pool)
+        uint256 fee = (match_.prizePool * FEE_BPS) / 10000;
+        uint256 prizeAmount = match_.prizePool - fee;
 
-        emit PrizeClaimed(matchId, msg.sender, match_.prizePool);
+        // Transfer prize to winner (99.5%)
+        usdc.safeTransfer(msg.sender, prizeAmount);
+
+        // Accumulate fee for later withdrawal
+        accumulatedFees += fee;
+
+        emit PrizeClaimed(matchId, msg.sender, prizeAmount);
     }
 
     /**
@@ -216,12 +229,42 @@ contract ChainOrbArena is Ownable {
     }
 
     /**
+     * @notice Set the fee recipient address (owner only)
+     * @param _feeRecipient The fee recipient address
+     */
+    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+        require(_feeRecipient != address(0), "Invalid fee recipient address");
+        feeRecipient = _feeRecipient;
+    }
+
+    /**
+     * @notice Withdraw accumulated fees (fee recipient only)
+     */
+    function withdrawFees() external {
+        require(msg.sender == feeRecipient, "Only fee recipient can withdraw");
+        require(accumulatedFees > 0, "No fees to withdraw");
+
+        uint256 amount = accumulatedFees;
+        accumulatedFees = 0;
+        usdc.safeTransfer(feeRecipient, amount);
+    }
+
+    /**
+     * @notice Get accumulated fees amount
+     * @return Amount of fees accumulated
+     */
+    function getAccumulatedFees() external view returns (uint256) {
+        return accumulatedFees;
+    }
+
+    /**
      * @notice Emergency withdraw (owner only)
      * @dev Only use in case of emergency
      */
     function emergencyWithdraw() external onlyOwner {
         uint256 balance = usdc.balanceOf(address(this));
         usdc.safeTransfer(owner(), balance);
+        accumulatedFees = 0; // Reset fees in emergency
     }
 }
 
