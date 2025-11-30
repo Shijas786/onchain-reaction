@@ -15,7 +15,7 @@ export const USDC_ADDRESSES: Record<number, `0x${string}`> = {
 
 // ChainOrbArena contract addresses per chain
 export const ARENA_ADDRESSES: Record<number, `0x${string}`> = {
-  [CHAIN_IDS.BASE]: '0xCEeeA562C831f7688851f093d7012fAc8D8302D', // Base mainnet
+  [CHAIN_IDS.BASE]: '0xCEeeA562C831f7688851f093d7012fAc8D8302D5', // Base mainnet
   [CHAIN_IDS.ARBITRUM]: '0x859Bf3A3DD44D7607A7121ab1807F6BF90d7E86c', // Arbitrum mainnet
 }
 
