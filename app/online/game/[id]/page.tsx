@@ -154,7 +154,7 @@ function OnlineGameContent() {
   return (
     <>
       {/* Header */}
-      <div className="w-full max-w-4xl space-y-4 mb-4 px-4">
+      <div className="w-full max-w-4xl space-y-2 sm:space-y-4 mb-2 sm:mb-4 px-2 sm:px-4">
         {/* Top bar */}
         <div className="flex justify-between items-center">
           <Button
@@ -238,7 +238,7 @@ function OnlineGameContent() {
       </div>
 
       {/* Game Board */}
-      <div className="relative p-0 rounded-2xl overflow-hidden shadow-2xl">
+      <div className="relative p-0 sm:p-1 rounded-2xl overflow-hidden shadow-2xl flex-grow flex items-center justify-center min-h-0">
         <BoardRenderer
           board={gameBoard}
           rows={gameState?.rows || 9}

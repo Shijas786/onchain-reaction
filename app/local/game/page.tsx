@@ -38,7 +38,7 @@ function LocalGameContent() {
     return (
         <>
             {/* Top Bar */}
-            <div className="w-full max-w-lg flex justify-between items-center mb-6 px-4">
+            <div className="w-full max-w-lg flex justify-between items-center mb-2 sm:mb-6 px-2 sm:px-4">
                 <Button
                     variant="secondary"
                     size="sm"
