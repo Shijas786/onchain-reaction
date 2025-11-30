@@ -61,7 +61,7 @@ function OnlineGameContent() {
   // Convert SpacetimeDB players to game players
   const gamePlayers = useMemo((): Player[] => {
     return players.map(p => ({
-      id: p.identity,
+      id: p.identity?.toHexString?.() || p.id,
       name: p.name,
       color: p.color as GamePlayerColor,
       isAlive: p.isAlive,
@@ -173,7 +173,7 @@ function OnlineGameContent() {
             <div
               key={player.id}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
-                currentTurnPlayer?.identity === player.id
+                currentTurnPlayer?.identity?.toHexString?.() === player.id
                   ? "bg-white/20 scale-105 shadow-lg"
                   : "bg-white/5 opacity-60"
               } ${!player.isAlive ? "opacity-30 grayscale" : ""}`}
@@ -193,7 +193,7 @@ function OnlineGameContent() {
               <span className="text-white text-sm font-medium truncate max-w-[60px]">
                 {player.name}
               </span>
-              {currentTurnPlayer?.identity === player.id && (
+              {currentTurnPlayer?.identity?.toHexString?.() === player.id && (
                 <span className="text-[10px] bg-white/30 px-1.5 py-0.5 rounded text-white">
                   TURN
                 </span>
