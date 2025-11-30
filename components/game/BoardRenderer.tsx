@@ -23,9 +23,9 @@ const CAMERA_Z = 600; // Distance from camera to center of board
 const CAMERA_Y_OFFSET = 0; // Centered vertically
 const MIN_CANVAS_WIDTH = 800;
 const MIN_CANVAS_HEIGHT = 600;
-const MAX_CANVAS_WIDTH = 1200;
-const MAX_CANVAS_HEIGHT = 1000;
-const PADDING = 100; // Padding around board
+const MAX_CANVAS_WIDTH = 1400; // Increased for larger boards
+const MAX_CANVAS_HEIGHT = 1200; // Increased for larger boards
+const PADDING = 150; // Increased padding to ensure corners are visible
 
 const ORB_RADIUS = 18;
 
@@ -57,13 +57,15 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         const worldWidth = cols * BASE_CELL_SIZE;
         const worldHeight = rows * BASE_CELL_SIZE;
         
-        // Calculate required canvas size with padding
-        const requiredWidth = Math.min(MAX_CANVAS_WIDTH, Math.max(MIN_CANVAS_WIDTH, worldWidth + PADDING * 2));
-        const requiredHeight = Math.min(MAX_CANVAS_HEIGHT, Math.max(MIN_CANVAS_HEIGHT, worldHeight + PADDING * 2));
+        // Calculate required canvas size with extra padding to ensure corners are visible
+        // Add extra padding for diagonal corners (sqrt(2) factor)
+        const cornerPadding = Math.ceil(PADDING * 1.5); // Extra padding for corners
+        const requiredWidth = Math.min(MAX_CANVAS_WIDTH, Math.max(MIN_CANVAS_WIDTH, worldWidth + cornerPadding * 2));
+        const requiredHeight = Math.min(MAX_CANVAS_HEIGHT, Math.max(MIN_CANVAS_HEIGHT, worldHeight + cornerPadding * 2));
         
         // Calculate scale factor if board is too large
-        const widthScale = (requiredWidth - PADDING * 2) / worldWidth;
-        const heightScale = (requiredHeight - PADDING * 2) / worldHeight;
+        const widthScale = (requiredWidth - cornerPadding * 2) / worldWidth;
+        const heightScale = (requiredHeight - cornerPadding * 2) / worldHeight;
         const scale = Math.min(widthScale, heightScale, 1); // Don't scale up, only down
         
         const finalCellSize = BASE_CELL_SIZE * scale;
@@ -309,10 +311,12 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             ctx.clearRect(0, 0, width, height);
 
             // --- Draw Board Background ---
-            const xMin = -cols / 2 * cellSize;
-            const xMax = cols / 2 * cellSize;
-            const yMin = -rows / 2 * cellSize;
-            const yMax = rows / 2 * cellSize;
+            // Extend board bounds to ensure corners are fully visible
+            const margin = cellSize * 0.1; // Small margin to ensure borders are visible
+            const xMin = -cols / 2 * cellSize - margin;
+            const xMax = cols / 2 * cellSize + margin;
+            const yMin = -rows / 2 * cellSize - margin;
+            const yMax = rows / 2 * cellSize + margin;
 
             const pTL = project(xMin, yMin, 0, width, height);
             const pTR = project(xMax, yMin, 0, width, height);
@@ -381,11 +385,13 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                     if (!board || !board[r] || !board[r][c]) continue;
                     const cell = board[r][c];
                     if (cell.count > 0 && cell.owner) {
+                        // Ensure color is valid, fallback to red if not
+                        const validColor: PlayerColor = COLORS[cell.owner] ? cell.owner : 'red';
                         const xWorld = (c - cols / 2 + 0.5) * cellSize;
                         const yWorld = (r - rows / 2 + 0.5) * cellSize;
 
                         const p = project(xWorld, yWorld, 0, width, height);
-                        drawOrbGroup(ctx, p.x, p.y, p.scale, cell.owner, cell.count);
+                        drawOrbGroup(ctx, p.x, p.y, p.scale, validColor, cell.count);
                     }
                 }
             }
