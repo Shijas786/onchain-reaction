@@ -19,7 +19,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   const { address, chainId: connectedChainId } = useAccount();
   const publicClient = usePublicClient();
   const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
-  
+
   const [selectedChain, setSelectedChain] = useState<number>(CHAIN_IDS.BASE);
   const [entryFee, setEntryFee] = useState<string>("5");
   const [customEntryFee, setCustomEntryFee] = useState<string>("");
@@ -36,7 +36,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   const arenaAddress = ARENA_ADDRESSES[selectedChain];
   const usdcAddress = USDC_ADDRESSES[selectedChain];
   const feeToUse = useCustomFee ? customEntryFee : entryFee;
-  
+
   // Helper function to safely parse entry fee
   const getEntryFeeWei = (): bigint => {
     if (!feeToUse) return BigInt(0);
@@ -44,7 +44,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     if (isNaN(num) || !isFinite(num) || num <= 0) return BigInt(0);
     return parseUSDC(feeToUse);
   };
-  
+
   // Helper to safely convert to BigInt
   const safeBigInt = (value: unknown): bigint | null => {
     try {
@@ -56,7 +56,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       return null;
     }
   };
-  
+
   // Helper to safely compare BigInt values
   const safeCompare = (a: unknown, b: bigint, op: 'lt' | 'gte' | 'eq' = 'gte'): boolean => {
     const aBigInt = safeBigInt(a);
@@ -72,7 +72,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       return false;
     }
   };
-  
+
   const entryFeeWei = getEntryFeeWei();
 
   // Check current USDC allowance
@@ -124,31 +124,42 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   // Handle successful approval
   useEffect(() => {
     if (isSuccess && txHash && step === 'approve') {
-      refetchAllowance();
-      setTxHash(undefined);
-      setStep('create');
+      const checkAllowance = async () => {
+        // Wait a bit for the RPC to index the event
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const { data: newAllowance } = await refetchAllowance();
+
+        // Force update step if allowance is sufficient
+        const currentAllowance = safeBigInt(newAllowance);
+        if (currentAllowance !== null && currentAllowance >= entryFeeWei) {
+          setTxHash(undefined);
+          setStep('create');
+        }
+      };
+
+      checkAllowance();
     }
-  }, [isSuccess, txHash, step, refetchAllowance]);
+  }, [isSuccess, txHash, step, refetchAllowance, entryFeeWei]);
 
   async function handleApprove() {
     if (!address || !feeToUse) return;
-    
+
     setError(null);
-    
+
     // Validate entry fee
     const feeNum = parseFloat(feeToUse);
     if (!feeToUse || isNaN(feeNum) || feeNum <= 0) {
       setError("Please enter a valid entry fee");
       return;
     }
-    
+
     setIsCreating(true);
-    
+
     try {
       // Base USDC requires resetting allowance to 0 before setting new approval
       const currentAllowance = safeBigInt(allowance);
       const hasExistingAllowance = currentAllowance !== null && currentAllowance > BigInt(0);
-      
+
       // For Base, always reset existing allowance to 0 first (required by Base USDC)
       if (selectedChain === CHAIN_IDS.BASE && hasExistingAllowance) {
         try {
@@ -160,7 +171,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             args: [arenaAddress, BigInt(0)],
             chainId: selectedChain,
           });
-          
+
           if (publicClient) {
             await publicClient.waitForTransactionReceipt({ hash: resetHash });
             // Wait a bit for state to update
@@ -171,10 +182,10 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
           console.warn('[CreateMatchButton] Allowance reset failed (may continue anyway):', resetErr);
         }
       }
-      
+
       // Use maximum approval (type(uint256).max) - standard pattern for better UX
       const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
-      
+
       const hash = await writeContractAsync({
         address: usdcAddress,
         abi: ERC20Abi,
@@ -186,19 +197,20 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     } catch (e: any) {
       console.error('[CreateMatchButton] Approval error:', e);
       const errorMessage = e?.shortMessage || e?.message || "";
-      const isUserRejection = 
+      const isUserRejection =
         errorMessage.toLowerCase().includes("user rejected") ||
         errorMessage.toLowerCase().includes("user rejected the request") ||
         e?.name === "UserRejectedRequestError";
-      
-      const isSimulationError = 
+
+      const isSimulationError =
         errorMessage.toLowerCase().includes("simulation failed") ||
-        errorMessage.toLowerCase().includes("execution reverted");
-      
+        errorMessage.toLowerCase().includes("execution reverted") ||
+        errorMessage.includes("#1002");
+
       if (isUserRejection) {
         setError("Transaction was cancelled. Please try again when ready.");
       } else if (isSimulationError && selectedChain === CHAIN_IDS.BASE) {
-        setError("Base USDC approval failed. If you have an existing allowance, please reset it to 0 in your wallet first, then try again.");
+        setError("Base transaction failed. Please check your USDC balance and try resetting allowance to 0 if needed.");
       } else if (isSimulationError) {
         setError("Approval failed. Please check your USDC balance and try again.");
       } else {
@@ -210,35 +222,35 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
 
   async function handleCreate() {
     if (!address || !publicClient) return;
-    
+
     // Clear any previous errors
     setError(null);
-    
+
     // Validate entry fee
     const feeNum = parseFloat(feeToUse);
-    
+
     if (!feeToUse || isNaN(feeNum) || feeNum <= 0) {
       setError("Please enter a valid entry fee");
       return;
     }
-    
+
     if (feeNum > 10000) {
       setError("Entry fee cannot exceed $10,000 USDC");
       return;
     }
-    
+
     // Validate max players (contract requires 2-8)
     if (maxPlayers < 2 || maxPlayers > 8) {
       setError("Max players must be between 2 and 8");
       return;
     }
-    
+
     // Validate entryFeeWei is valid and not zero
     if (entryFeeWei === BigInt(0) || isNaN(Number(entryFeeWei))) {
       setError("Invalid entry fee. Please enter a valid amount.");
       return;
     }
-    
+
     // Double-check allowance before creating
     if (allowance !== undefined) {
       try {
@@ -254,7 +266,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         return;
       }
     }
-    
+
     // Check balance
     if (balance !== undefined) {
       try {
@@ -269,9 +281,9 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         return;
       }
     }
-    
+
     setIsCreating(true);
-    
+
     try {
       const hash = await writeContractAsync({
         address: arenaAddress,
@@ -280,12 +292,12 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         args: [usdcAddress, entryFeeWei, BigInt(maxPlayers)],
         chainId: selectedChain,
       });
-      
+
       setTxHash(hash);
-      
+
       // Wait for receipt to get matchId from event
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      
+
       // Find MatchCreated event
       const matchCreatedLog = receipt.logs.find(log => {
         try {
@@ -299,7 +311,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
           return false;
         }
       });
-      
+
       if (matchCreatedLog) {
         const decoded = decodeEventLog({
           abi: ChainOrbArenaAbi,
@@ -310,7 +322,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         const newRoomCode = generateRoomCode();
         setRoomCode(newRoomCode);
         setCreatedMatchId(matchId);
-        
+
         // Create SpacetimeDB lobby
         if (isSpacetimeConnected && address) {
           try {
@@ -318,7 +330,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             if (conn) {
               const arenaAddress = ARENA_ADDRESSES[selectedChain];
               const entryFeeWei = parseUSDC(useCustomFee ? customEntryFee : entryFee);
-              
+
               conn.reducers.createLobby({
                 chainId: selectedChain,
                 matchId: BigInt(matchId),
@@ -336,34 +348,34 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             // Continue anyway - match is created on-chain
           }
         }
-        
+
         setShowRoomCode(true);
       }
-      
+
     } catch (e: any) {
       console.error(e);
-      
+
       // Check if user rejected the transaction
       const errorMessage = e?.shortMessage || e?.message || "";
-      const isUserRejection = 
+      const isUserRejection =
         errorMessage.toLowerCase().includes("user rejected") ||
         errorMessage.toLowerCase().includes("user rejected the request") ||
         e?.name === "UserRejectedRequestError";
-      
-      const isAllowanceError = 
+
+      const isAllowanceError =
         errorMessage.toLowerCase().includes("transfer amount exceeds allowance") ||
         errorMessage.toLowerCase().includes("allowance") ||
         errorMessage.toLowerCase().includes("insufficient allowance");
-      
-      const isTokenError = 
+
+      const isTokenError =
         errorMessage.toLowerCase().includes("token not allowed") ||
         errorMessage.toLowerCase().includes("not allowed");
-      
-      const isValidationError = 
+
+      const isValidationError =
         errorMessage.toLowerCase().includes("entry must") ||
         errorMessage.toLowerCase().includes("players 2-8") ||
         errorMessage.toLowerCase().includes("execution reverted");
-      
+
       if (isUserRejection) {
         setError("Transaction was cancelled. Please try again when ready.");
       } else if (isAllowanceError) {
@@ -403,11 +415,10 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             <button
               key={chainId}
               onClick={() => setSelectedChain(chainId)}
-              className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
-                selectedChain === chainId
-                  ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
+              className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all ${selectedChain === chainId
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
             >
               {getChainName(chainId)}
             </button>
@@ -427,11 +438,10 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
                 setUseCustomFee(false);
               }}
               disabled={isProcessing}
-              className={`px-3 py-2 rounded-xl font-bold text-sm transition-all ${
-                entryFee === option.value && !useCustomFee
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50'
-              }`}
+              className={`px-3 py-2 rounded-xl font-bold text-sm transition-all ${entryFee === option.value && !useCustomFee
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50'
+                }`}
             >
               {option.label}
             </button>
@@ -442,11 +452,10 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
           <button
             onClick={() => setUseCustomFee(!useCustomFee)}
             disabled={isProcessing}
-            className={`w-full px-3 py-2 rounded-xl font-bold text-sm transition-all ${
-              useCustomFee
-                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50'
-            }`}
+            className={`w-full px-3 py-2 rounded-xl font-bold text-sm transition-all ${useCustomFee
+              ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50'
+              }`}
           >
             {useCustomFee ? '✓ Custom Amount' : '💵 Custom Amount'}
           </button>
@@ -482,11 +491,10 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             <button
               key={num}
               onClick={() => setMaxPlayers(num)}
-              className={`w-10 h-10 rounded-xl font-bold text-sm transition-all ${
-                maxPlayers === num
-                  ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
+              className={`w-10 h-10 rounded-xl font-bold text-sm transition-all ${maxPlayers === num
+                ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
             >
               {num}
             </button>
@@ -567,7 +575,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
           {!isPending && !isConfirming && "Create Match"}
         </button>
       )}
-      
+
       {/* Show message if allowance check is pending */}
       {step === 'create' && (allowance === undefined || !safeCompare(allowance, entryFeeWei, 'gte')) && balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && (
         <div className="text-center p-3 bg-amber-50 rounded-xl border border-amber-200">

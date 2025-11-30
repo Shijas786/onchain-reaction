@@ -16,25 +16,31 @@ import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 import { getDbConnection } from "@/lib/spacetimedb/client";
 
 interface Player {
-    id: string;
-    name: string;
-    avatar: string;
+  id: string;
+  name: string;
+  avatar: string;
   address: string;
-    isHost: boolean;
-    farcasterHandle?: string;
+  isHost: boolean;
+  farcasterHandle?: string;
 }
 
 function LobbyContent() {
-    const params = useParams();
-    const searchParams = useSearchParams();
-    const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { address, isConnected } = useAccount();
   const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
 
   const roomCode = params.id as string;
   const matchIdParam = searchParams.get("matchId");
-  const matchId = matchIdParam ? parseInt(matchIdParam) : parseInt(params.id as string);
-    const isHost = searchParams.get("host") === "true";
+
+  // Only try to parse matchId if it's explicitly provided or if roomCode looks numeric
+  // Otherwise default to -1 to indicate invalid/loading state
+  const matchId = matchIdParam
+    ? parseInt(matchIdParam)
+    : /^\d+$/.test(roomCode) ? parseInt(roomCode) : -1;
+
+  const isHost = searchParams.get("host") === "true";
   const chainIdParam = searchParams.get("chainId");
   const arenaParam = searchParams.get("arena");
 
@@ -42,7 +48,7 @@ function LobbyContent() {
   const chainId = chainIdParam ? parseInt(chainIdParam) : CHAIN_IDS.BASE;
   const arenaAddress = (arenaParam as `0x${string}`) || ARENA_ADDRESSES[chainId];
 
-    const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [hasJoined, setHasJoined] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
@@ -59,8 +65,11 @@ function LobbyContent() {
     address: arenaAddress,
     abi: ChainOrbArenaAbi,
     functionName: "matches",
-    args: [BigInt(matchId)],
+    args: [BigInt(matchId !== -1 ? matchId : 0)],
     chainId,
+    query: {
+      enabled: matchId !== -1,
+    },
   });
 
   // Read players from contract
@@ -68,8 +77,11 @@ function LobbyContent() {
     address: arenaAddress,
     abi: ChainOrbArenaAbi,
     functionName: "getPlayers",
-    args: [BigInt(matchId)],
+    args: [BigInt(matchId !== -1 ? matchId : 0)],
     chainId,
+    query: {
+      enabled: matchId !== -1,
+    },
   });
 
   // Check if current user has joined
@@ -77,23 +89,23 @@ function LobbyContent() {
     address: arenaAddress,
     abi: ChainOrbArenaAbi,
     functionName: "isPlayerInMatch",
-    args: [BigInt(matchId), address],
+    args: [BigInt(matchId !== -1 ? matchId : 0), address],
     chainId,
     query: {
-      enabled: !!address,
+      enabled: !!address && matchId !== -1,
     },
   });
 
   // Parse match info
   const match = matchInfo
     ? {
-        host: (matchInfo as any)[0] as string,
-        entryFee: (matchInfo as any)[1] as bigint,
-        maxPlayers: Number((matchInfo as any)[2]),
-        prizePool: (matchInfo as any)[3] as bigint,
-        status: Number((matchInfo as any)[4]),
-        winner: (matchInfo as any)[5] as string,
-      }
+      host: (matchInfo as any)[0] as string,
+      entryFee: (matchInfo as any)[1] as bigint,
+      maxPlayers: Number((matchInfo as any)[2]),
+      prizePool: (matchInfo as any)[3] as bigint,
+      status: Number((matchInfo as any)[4]),
+      winner: (matchInfo as any)[5] as string,
+    }
     : null;
 
   // Create SpacetimeDB lobby if it doesn't exist (for existing matches)
@@ -122,7 +134,7 @@ function LobbyContent() {
   }, [isSpacetimeConnected, match, spacetimeLobby, matchIdParam, address, chainId, arenaAddress, roomCode, matchId]);
 
   // Update players list - prefer SpacetimeDB data, fallback to contract
-    useEffect(() => {
+  useEffect(() => {
     if (spacetimePlayers && spacetimePlayers.length > 0) {
       // Use SpacetimeDB players
       const playerList: Player[] = spacetimePlayers.map((p) => ({
@@ -201,13 +213,13 @@ function LobbyContent() {
   const prizePool = match?.prizePool ? formatUSDC(match.prizePool) : "0";
   const statusText = match?.status === 0 ? "Waiting" : match?.status === 1 ? "Live" : "Finished";
 
-    return (
-        <main className="flex min-h-screen flex-col items-center justify-center p-8 relative overflow-hidden">
-            <DoodleBackground />
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 relative overflow-hidden">
+      <DoodleBackground />
 
       <div className="w-full max-w-2xl relative z-10 space-y-6">
         {/* Header */}
-                <div className="text-center space-y-2">
+        <div className="text-center space-y-2">
           <h1 className="text-4xl font-black text-slate-800">Match Lobby</h1>
           {/* Room Code Display */}
           <div className="inline-block bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 px-6 py-3 rounded-full shadow-lg">
@@ -220,11 +232,10 @@ function LobbyContent() {
           </div>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <span
-              className={`px-3 py-1 rounded-full text-xs font-bold ${
-                chainId === CHAIN_IDS.BASE
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-orange-100 text-orange-700"
-              }`}
+              className={`px-3 py-1 rounded-full text-xs font-bold ${chainId === CHAIN_IDS.BASE
+                ? "bg-blue-100 text-blue-700"
+                : "bg-orange-100 text-orange-700"
+                }`}
             >
               {getChainName(chainId)}
             </span>
@@ -232,13 +243,12 @@ function LobbyContent() {
               Match #{matchId}
             </span>
             <span
-              className={`px-3 py-1 rounded-full text-xs font-bold ${
-                statusText === "Waiting"
-                  ? "bg-amber-100 text-amber-700"
-                  : statusText === "Live"
+              className={`px-3 py-1 rounded-full text-xs font-bold ${statusText === "Waiting"
+                ? "bg-amber-100 text-amber-700"
+                : statusText === "Live"
                   ? "bg-emerald-100 text-emerald-700"
                   : "bg-slate-100 text-slate-600"
-              }`}
+                }`}
             >
               {statusText}
             </span>
@@ -256,43 +266,42 @@ function LobbyContent() {
               <p className="text-emerald-100 text-xs font-medium">Prize Pool</p>
               <p className="text-2xl font-black">${prizePool} USDC</p>
             </div>
-                    </div>
-                </div>
+          </div>
+        </div>
 
         {/* Players Card */}
         <div className="bg-white/90 backdrop-blur-sm p-6 rounded-3xl shadow-xl border border-slate-200">
-                    <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2">
-                        <span>Players</span>
+          <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2">
+            <span>Players</span>
             <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded-lg text-xs">
               {players.length}/{maxPlayers}
             </span>
-                    </h2>
+          </h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {players.map((player, index) => (
-                            <motion.div
-                                key={player.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
+              <motion.div
+                key={player.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`flex items-center gap-4 p-4 rounded-2xl border ${
-                  player.address.toLowerCase() === address?.toLowerCase()
-                    ? "bg-blue-50 border-blue-200"
-                    : "bg-slate-50 border-slate-100"
-                }`}
-                            >
+                className={`flex items-center gap-4 p-4 rounded-2xl border ${player.address.toLowerCase() === address?.toLowerCase()
+                  ? "bg-blue-50 border-blue-200"
+                  : "bg-slate-50 border-slate-100"
+                  }`}
+              >
                 <Image
-                                    src={player.avatar}
-                                    alt={player.name}
+                  src={player.avatar}
+                  alt={player.name}
                   width={48}
                   height={48}
                   className="w-12 h-12 rounded-full border-2 border-white shadow-sm object-cover"
                   unoptimized
-                                />
+                />
                 <div className="flex-1 min-w-0">
-                                    <div className="font-bold text-slate-800 flex items-center gap-2">
+                  <div className="font-bold text-slate-800 flex items-center gap-2">
                     <span className="truncate">{player.name}</span>
-                                        {player.isHost && (
+                    {player.isHost && (
                       <span className="bg-yellow-100 text-yellow-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold flex-shrink-0">
                         HOST
                       </span>
@@ -301,35 +310,35 @@ function LobbyContent() {
                       <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold flex-shrink-0">
                         YOU
                       </span>
-                                        )}
-                                    </div>
+                    )}
+                  </div>
                   <div className="text-sm text-slate-400 font-mono truncate">
                     {player.farcasterHandle}
                   </div>
-                                </div>
-                            </motion.div>
-                        ))}
+                </div>
+              </motion.div>
+            ))}
 
-                        {/* Empty Slots */}
+            {/* Empty Slots */}
             {Array.from({ length: Math.max(0, maxPlayers - players.length) }).map(
               (_, i) => (
                 <div
                   key={`empty-${i}`}
                   className="flex items-center gap-4 p-4 border-2 border-dashed border-slate-200 rounded-2xl opacity-50"
                 >
-                                <div className="w-12 h-12 rounded-full bg-slate-100 animate-pulse" />
-                                <div className="space-y-2">
-                                    <div className="w-24 h-4 bg-slate-100 rounded animate-pulse" />
-                                    <div className="w-16 h-3 bg-slate-100 rounded animate-pulse" />
-                                </div>
-                            </div>
+                  <div className="w-12 h-12 rounded-full bg-slate-100 animate-pulse" />
+                  <div className="space-y-2">
+                    <div className="w-24 h-4 bg-slate-100 rounded animate-pulse" />
+                    <div className="w-16 h-3 bg-slate-100 rounded animate-pulse" />
+                  </div>
+                </div>
               )
             )}
-                    </div>
-                </div>
+          </div>
+        </div>
 
         {/* Actions */}
-                <div className="flex flex-col gap-4 items-center">
+        <div className="flex flex-col gap-4 items-center">
           {!isConnected ? (
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 w-full max-w-sm text-center space-y-4">
               <p className="text-slate-600 text-sm">
@@ -339,18 +348,18 @@ function LobbyContent() {
             </div>
           ) : hasJoined || isHost || isSpacetimeHost ? (
             (isHost || isSpacetimeHost) && players.length >= 2 ? (
-                        <Button
-                            variant="primary"
-                            size="lg"
-                            className="w-full max-w-xs shadow-lg shadow-blue-500/20"
-                            onClick={handleStartGame}
-                            disabled={isStarting || !isSpacetimeConnected}
-                        >
-                            {isStarting ? "Starting..." : "Start Game"}
-                        </Button>
-                    ) : (
-                        <div className="text-center p-4 bg-white/50 backdrop-blur-md rounded-2xl border border-white/50">
-                            <div className="flex items-center justify-center gap-3 text-slate-600 font-bold">
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full max-w-xs shadow-lg shadow-blue-500/20"
+                onClick={handleStartGame}
+                disabled={isStarting || !isSpacetimeConnected}
+              >
+                {isStarting ? "Starting..." : "Start Game"}
+              </Button>
+            ) : (
+              <div className="text-center p-4 bg-white/50 backdrop-blur-md rounded-2xl border border-white/50">
+                <div className="flex items-center justify-center gap-3 text-slate-600 font-bold">
                   <div
                     className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
                     style={{ animationDelay: "0s" }}
@@ -368,7 +377,7 @@ function LobbyContent() {
                       ? `Waiting for players (${players.length}/${maxPlayers})...`
                       : "Waiting for host to start..."}
                   </span>
-                            </div>
+                </div>
               </div>
             )
           ) : (
@@ -381,21 +390,21 @@ function LobbyContent() {
                 lobbyId={roomCode}
                 onSuccess={handleJoinSuccess}
               />
-                        </div>
-                    )}
-
-                    <Button
-                        variant="secondary"
-                        size="sm"
-            onClick={() => router.push("/online")}
-                        className="bg-white/80 text-slate-600 hover:bg-white shadow-none"
-                    >
-                        Leave Room
-                    </Button>
-                </div>
             </div>
-        </main>
-    );
+          )}
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => router.push("/online")}
+            className="bg-white/80 text-slate-600 hover:bg-white shadow-none"
+          >
+            Leave Room
+          </Button>
+        </div>
+      </div>
+    </main>
+  );
 }
 
 export default function LobbyPage() {
