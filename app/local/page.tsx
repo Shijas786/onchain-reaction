@@ -13,6 +13,8 @@ const PASTEL_COLORS: Record<PlayerColor, string> = {
     yellow: "#FFF7B1",
     purple: "#E0BBE4",
     orange: "#FFDAC1",
+    pink: "#F8BBD0",
+    cyan: "#B2EBF2",
 };
 
 export default function LocalSetup() {

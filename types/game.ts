@@ -1,4 +1,4 @@
-export type PlayerColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange';
+export type PlayerColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange' | 'pink' | 'cyan';
 
 export interface Player {
     id: string;
@@ -28,4 +28,4 @@ export interface GameState {
 export const ROWS = 8;
 export const COLS = 8;
 
-export const PLAYER_COLORS: PlayerColor[] = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
+export const PLAYER_COLORS: PlayerColor[] = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan'];

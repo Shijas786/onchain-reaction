@@ -30,12 +30,14 @@ const PADDING = 100; // Padding around board
 const ORB_RADIUS = 18;
 
 const COLORS: Record<PlayerColor, string> = {
-    red: "#FF9AA2",   // Pastel Red
-    blue: "#C7CEEA",  // Pastel Blue
-    green: "#B5EAD7", // Pastel Green
-    yellow: "#FFF7B1",// Pastel Yellow
-    purple: "#E0BBE4",// Pastel Purple
-    orange: "#FFDAC1",// Pastel Orange
+    red: "#FF9AA2",     // Pastel Red
+    blue: "#C7CEEA",    // Pastel Blue
+    green: "#B5EAD7",   // Pastel Green
+    yellow: "#FFF7B1",  // Pastel Yellow
+    purple: "#E0BBE4",  // Pastel Purple
+    orange: "#FFDAC1",  // Pastel Orange
+    pink: "#F8BBD0",    // Pastel Pink
+    cyan: "#B2EBF2",    // Pastel Cyan
 };
 
 export const BoardRenderer: React.FC<BoardRendererProps> = ({

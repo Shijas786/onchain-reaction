@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Board, Player, GameState, PLAYER_COLORS, PlayerColor, ROWS, COLS } from '@/types/game';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Board, Player, GameState, PLAYER_COLORS, PlayerColor } from '@/types/game';
 import { createBoard, getMaxCapacity, isValidMove, getNeighbors } from '@/lib/gameLogic';
+import { getBoardSize } from '@/lib/boardSize';
 import { soundManager } from '@/lib/sound';
 
 export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) => {
+    const { rows, cols } = useMemo(() => getBoardSize(playerCount), [playerCount]);
+
     const [gameState, setGameState] = useState<GameState>({
-        board: createBoard(),
+        board: createBoard(rows, cols),
         players: [],
         currentPlayerIndex: 0,
         isGameOver: false,
@@ -23,8 +26,16 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
             isAlive: true,
             name: `Player ${i + 1}`,
         }));
-        setGameState(prev => ({ ...prev, players: newPlayers, board: createBoard() }));
-    }, [playerCount, customColors]);
+        setGameState({
+            board: createBoard(rows, cols),
+            players: newPlayers,
+            currentPlayerIndex: 0,
+            isGameOver: false,
+            winner: null,
+            isAnimating: false,
+        });
+        setExplosionQueue([]);
+    }, [playerCount, customColors, rows, cols]);
 
     const checkWinner = useCallback((board: Board, players: Player[], currentPlayerIndex: number) => {
         const playerOrbCounts: Record<string, number> = {};
@@ -53,9 +64,9 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
 
         const step = async () => {
             const unstableCells: { r: number; c: number }[] = [];
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    if (board[r][c].count >= getMaxCapacity(r, c)) {
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (board[r][c].count >= getMaxCapacity(r, c, rows, cols)) {
                         unstableCells.push({ r, c });
                     }
                 }
@@ -92,8 +103,8 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
                         // Check if this player is alive (has orbs).
                         // Note: We need to check the NEW board state for orbs.
                         let hasOrbs = false;
-                        for (let r = 0; r < ROWS; r++) {
-                            for (let c = 0; c < COLS; c++) {
+                        for (let r = 0; r < rows; r++) {
+                            for (let c = 0; c < cols; c++) {
                                 if (board[r][c].owner === nextPlayer.color) {
                                     hasOrbs = true;
                                     break;
@@ -139,12 +150,12 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
             const nextBoard = JSON.parse(JSON.stringify(board));
             unstableCells.forEach(({ r, c }) => {
                 const cell = nextBoard[r][c];
-                cell.count -= getMaxCapacity(r, c);
+                cell.count -= getMaxCapacity(r, c, rows, cols);
                 if (cell.count === 0) {
                     cell.owner = null;
                 }
 
-                const neighbors = getNeighbors(r, c);
+                const neighbors = getNeighbors(r, c, rows, cols);
                 neighbors.forEach(n => {
                     const neighbor = nextBoard[n.r][n.c];
                     neighbor.count++;
@@ -178,7 +189,7 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
 
         step();
 
-    }, [checkWinner]); // Added checkWinner to dependencies (which depends on nothing but is re-created)
+    }, [checkWinner, rows, cols]);
 
     const makeMove = useCallback((row: number, col: number) => {
         if (gameState.isAnimating || gameState.isGameOver) return;
