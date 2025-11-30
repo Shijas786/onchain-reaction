@@ -8,12 +8,16 @@ import { base, arbitrum } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { onchainReactionAbi } from "../lib/onchainReaction";
 import { ARENA_ADDRESSES, CHAIN_IDS } from "../lib/contracts";
+import { Infer } from "spacetimedb";
 import {
   DbConnection,
   DbConnectionBuilder,
   Lobby,
   LobbyRow,
 } from "../lib/spacetimedb/generated";
+
+type LobbyType = Infer<typeof Lobby>;
+type LobbyRowType = Infer<typeof LobbyRow>;
 
 const ORACLE_PK = process.env.ORACLE_PRIVATE_KEY as `0x${string}`;
 if (!ORACLE_PK) {
@@ -26,7 +30,7 @@ const SPACETIMEDB_CONFIG = {
 };
 
 // RPC URLs (optional, uses default if not provided)
-const RPC_URLS = {
+const RPC_URLS: Record<number, string | undefined> = {
   [CHAIN_IDS.BASE]: process.env.RPC_URL_BASE,
   [CHAIN_IDS.ARBITRUM]: process.env.RPC_URL_ARBITRUM,
 };
@@ -89,7 +93,7 @@ async function isMatchFinalized(chainId: number, matchId: bigint): Promise<boole
  * Finalize a match on-chain by calling finishMatch
  */
 async function finalizeMatchOnChain(
-  lobby: Lobby
+  lobby: LobbyType
 ): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (lobby.status !== "finished") {
@@ -170,7 +174,7 @@ async function markLobbyAsSettled(
   // 1. Add a reducer to update the lobby status to "settled"
   // 2. Add a settled_onchain field to the Lobby table in Rust
   // 3. Use the existing status field and change "finished" to "settled"
-  
+
   console.log(`Would mark lobby ${lobbyId} as settled with tx ${txHash}`);
   // TODO: Call a reducer like: connection.reducers.markSettled({ lobbyId, txHash });
 }
@@ -227,14 +231,14 @@ async function main() {
         // Get all finished lobbies that have a winner
         const allLobbies = Array.from(ctx.db.lobby.iter());
         const finishedLobbies = allLobbies.filter(
-          (lobby: LobbyRow) => lobby.status === "finished" && lobby.winnerAddress
+          (lobby: LobbyRowType) => lobby.status === "finished" && lobby.winnerAddress
         );
 
         console.log(`Found ${finishedLobbies.length} finished lobby/lobbies`);
 
         // Process each finished lobby
         finishedLobbies.forEach((lobby) => {
-          processFinishedLobby(lobby as unknown as Lobby, connection!);
+          processFinishedLobby(lobby as unknown as LobbyType, connection!);
         });
       })
       .onError((err) => {
@@ -247,7 +251,7 @@ async function main() {
       // Only process when status changes from non-finished to finished
       if (oldRow.status !== "finished" && newRow.status === "finished" && newRow.winnerAddress) {
         console.log(`🎯 New finished lobby detected: ${newRow.id}`);
-        processFinishedLobby(newRow as unknown as Lobby, connection!);
+        processFinishedLobby(newRow as unknown as LobbyType, connection!);
       }
     });
 
@@ -279,12 +283,12 @@ async function main() {
 /**
  * Process a finished lobby - finalize on-chain
  */
-async function processFinishedLobby(lobby: Lobby, connection: DbConnection): Promise<void> {
+async function processFinishedLobby(lobby: LobbyType, connection: DbConnection): Promise<void> {
   console.log(`\n🔄 Processing finished lobby: ${lobby.id}`);
 
   // Check if already settled (in case we restarted)
   const alreadyFinalized = await isMatchFinalized(lobby.chainId, BigInt(Number(lobby.matchId)));
-  
+
   if (alreadyFinalized) {
     console.log(`   ⏭️  Match ${lobby.matchId} already finalized on-chain, skipping`);
     return;
