@@ -62,8 +62,15 @@ export type Board = { orbs: number; owner: string | null }[][];
 
 export function parseBoard(boardJson: string): Board {
   try {
-    return JSON.parse(boardJson);
+    const parsed = JSON.parse(boardJson);
+    // Validate it's a 2D array
+    if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
+      return parsed;
+    }
+    // Invalid structure, return empty board
+    return Array(9).fill(null).map(() => Array(6).fill(null).map(() => ({ orbs: 0, owner: null })));
   } catch {
+    // Parse error, return empty board
     return Array(9).fill(null).map(() => Array(6).fill(null).map(() => ({ orbs: 0, owner: null })));
   }
 }

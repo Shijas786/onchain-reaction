@@ -4,8 +4,8 @@ import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { base, arbitrum } from '@reown/appkit/networks'
 import type { Chain } from 'viem' // Import Chain type for explicit typing
 
-// Read Project ID from environment variables
-export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID
+// Read Project ID from environment variables and trim any whitespace/newlines
+export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID?.trim()
 
 // Ensure Project ID is defined at build time
 if (!projectId) {

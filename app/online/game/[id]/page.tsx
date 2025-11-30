@@ -45,18 +45,31 @@ function OnlineGameContent() {
 
   // Convert SpacetimeDB board to game board format
   const gameBoard = useMemo((): Board => {
-    if (!spacetimeBoard) {
-      return createBoard();
+    if (!spacetimeBoard || !Array.isArray(spacetimeBoard) || spacetimeBoard.length === 0) {
+      // Create empty board with correct dimensions from gameState
+      const rows = gameState?.rows || 9;
+      const cols = gameState?.cols || 6;
+      return Array.from({ length: rows }, (_, r) =>
+        Array.from({ length: cols }, (_, c) => ({
+          row: r,
+          col: c,
+          count: 0,
+          owner: null,
+        }))
+      );
     }
-    return spacetimeBoard.map((row, rowIndex) =>
-      row.map((cell, colIndex) => ({
+    return spacetimeBoard.map((row, rowIndex) => {
+      if (!Array.isArray(row)) {
+        return [];
+      }
+      return row.map((cell, colIndex) => ({
         row: rowIndex,
         col: colIndex,
-        count: cell.orbs,
-        owner: cell.owner as GamePlayerColor | null,
-      }))
-    );
-  }, [spacetimeBoard]);
+        count: cell?.orbs || 0,
+        owner: (cell?.owner as GamePlayerColor) || null,
+      }));
+    });
+  }, [spacetimeBoard, gameState]);
 
   // Convert SpacetimeDB players to game players
   const gamePlayers = useMemo((): Player[] => {

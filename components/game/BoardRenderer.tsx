@@ -331,6 +331,8 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                     const isExploding = explodingCellsRef.current.some(ec => ec.r === r && ec.c === c);
                     if (isExploding) continue;
 
+                    // Defensive check for board dimensions
+                    if (!board || !board[r] || !board[r][c]) continue;
                     const cell = board[r][c];
                     if (cell.count > 0 && cell.owner) {
                         const xWorld = (c - cols / 2 + 0.5) * CELL_SIZE;
