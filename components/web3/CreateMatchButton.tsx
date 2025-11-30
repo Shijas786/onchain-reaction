@@ -36,7 +36,44 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   const arenaAddress = ARENA_ADDRESSES[selectedChain];
   const usdcAddress = USDC_ADDRESSES[selectedChain];
   const feeToUse = useCustomFee ? customEntryFee : entryFee;
-  const entryFeeWei = feeToUse ? parseUSDC(feeToUse) : BigInt(0);
+  
+  // Helper function to safely parse entry fee
+  const getEntryFeeWei = (): bigint => {
+    if (!feeToUse) return BigInt(0);
+    const num = parseFloat(feeToUse);
+    if (isNaN(num) || !isFinite(num) || num <= 0) return BigInt(0);
+    return parseUSDC(feeToUse);
+  };
+  
+  // Helper to safely convert to BigInt
+  const safeBigInt = (value: unknown): bigint | null => {
+    try {
+      if (value === undefined || value === null) return null;
+      const str = String(value);
+      if (str === 'undefined' || str === 'null' || str === 'NaN') return null;
+      return BigInt(str);
+    } catch {
+      return null;
+    }
+  };
+  
+  // Helper to safely compare BigInt values
+  const safeCompare = (a: unknown, b: bigint, op: 'lt' | 'gte' | 'eq' = 'gte'): boolean => {
+    const aBigInt = safeBigInt(a);
+    if (aBigInt === null) return false;
+    try {
+      switch (op) {
+        case 'lt': return aBigInt < b;
+        case 'gte': return aBigInt >= b;
+        case 'eq': return aBigInt === b;
+        default: return false;
+      }
+    } catch {
+      return false;
+    }
+  };
+  
+  const entryFeeWei = getEntryFeeWei();
 
   // Check current USDC allowance
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
@@ -74,11 +111,11 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
 
   // Determine step based on allowance
   useEffect(() => {
-    if (step === 'check' && allowance !== undefined && feeToUse) {
-      const currentAllowance = BigInt(allowance as string);
-      if (currentAllowance >= entryFeeWei && entryFeeWei > 0) {
+    if (step === 'check' && feeToUse && entryFeeWei > BigInt(0)) {
+      const currentAllowance = safeBigInt(allowance);
+      if (currentAllowance !== null && currentAllowance >= entryFeeWei) {
         setStep('create');
-      } else if (entryFeeWei > 0) {
+      } else if (entryFeeWei > BigInt(0)) {
         setStep('approve');
       }
     }
@@ -149,6 +186,49 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     if (feeNum > 10000) {
       setError("Entry fee cannot exceed $10,000 USDC");
       return;
+    }
+    
+    // Validate max players (contract requires 2-8)
+    if (maxPlayers < 2 || maxPlayers > 8) {
+      setError("Max players must be between 2 and 8");
+      return;
+    }
+    
+    // Validate entryFeeWei is valid and not zero
+    if (entryFeeWei === BigInt(0) || isNaN(Number(entryFeeWei))) {
+      setError("Invalid entry fee. Please enter a valid amount.");
+      return;
+    }
+    
+    // Double-check allowance before creating
+    if (allowance !== undefined) {
+      try {
+        const currentAllowance = BigInt(allowance as string);
+        if (currentAllowance < entryFeeWei) {
+          setError("Insufficient USDC allowance. Please approve first.");
+          setStep('approve');
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking allowance:', err);
+        setError("Error checking allowance. Please try again.");
+        return;
+      }
+    }
+    
+    // Check balance
+    if (balance !== undefined) {
+      try {
+        const currentBalance = BigInt(balance as string);
+        if (currentBalance < entryFeeWei) {
+          setError("Insufficient USDC balance");
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking balance:', err);
+        setError("Error checking balance. Please try again.");
+        return;
+      }
     }
     
     setIsCreating(true);
@@ -233,15 +313,31 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       
       const isAllowanceError = 
         errorMessage.toLowerCase().includes("transfer amount exceeds allowance") ||
-        errorMessage.toLowerCase().includes("allowance");
+        errorMessage.toLowerCase().includes("allowance") ||
+        errorMessage.toLowerCase().includes("insufficient allowance");
+      
+      const isTokenError = 
+        errorMessage.toLowerCase().includes("token not allowed") ||
+        errorMessage.toLowerCase().includes("not allowed");
+      
+      const isValidationError = 
+        errorMessage.toLowerCase().includes("entry must") ||
+        errorMessage.toLowerCase().includes("players 2-8") ||
+        errorMessage.toLowerCase().includes("execution reverted");
       
       if (isUserRejection) {
         setError("Transaction was cancelled. Please try again when ready.");
       } else if (isAllowanceError) {
         setError("USDC approval required. Please approve USDC first.");
         setStep('approve');
+      } else if (isTokenError) {
+        setError("This token is not supported. Please use USDC.");
+      } else if (isValidationError) {
+        setError("Invalid match parameters. Please check entry fee (must be > 0) and max players (2-8).");
       } else {
-        setError(e?.shortMessage || e?.message || "Failed to create match. Please try again.");
+        // Show more detailed error for debugging
+        const detailedError = errorMessage || e?.message || "Failed to create match";
+        setError(`${detailedError}. Please check your balance and try again.`);
       }
     } finally {
       setIsCreating(false);
@@ -380,7 +476,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       </div>
 
       {/* Check balance */}
-      {balance !== undefined && entryFeeWei > 0 && BigInt(balance as string) < entryFeeWei && (
+      {balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'lt') && (
         <div className="flex flex-col gap-2">
           <button
             disabled
@@ -395,7 +491,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       )}
 
       {/* Step indicator */}
-      {balance !== undefined && entryFeeWei > 0 && BigInt(balance as string) >= entryFeeWei && step !== 'check' && (
+      {balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && step !== 'check' && (
         <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
           <span className={step === 'approve' ? 'text-blue-600 font-bold' : ''}>
             1. Approve USDC
@@ -408,7 +504,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       )}
 
       {/* Approval Button */}
-      {step === 'approve' && balance !== undefined && entryFeeWei > 0 && BigInt(balance as string) >= entryFeeWei && (
+      {step === 'approve' && balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && (
         <button
           onClick={handleApprove}
           disabled={isProcessing}
@@ -421,7 +517,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       )}
 
       {/* Create Button */}
-      {step === 'create' && balance !== undefined && entryFeeWei > 0 && BigInt(balance as string) >= entryFeeWei && (
+      {step === 'create' && balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && allowance !== undefined && safeCompare(allowance, entryFeeWei, 'gte') && (
         <button
           onClick={handleCreate}
           disabled={isProcessing}
@@ -432,12 +528,21 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
           {!isPending && !isConfirming && "Create Match"}
         </button>
       )}
+      
+      {/* Show message if allowance check is pending */}
+      {step === 'create' && (allowance === undefined || !safeCompare(allowance, entryFeeWei, 'gte')) && balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && (
+        <div className="text-center p-3 bg-amber-50 rounded-xl border border-amber-200">
+          <p className="text-xs text-amber-700">
+            Checking USDC approval...
+          </p>
+        </div>
+      )}
 
-      {/* Fallback create button if balance check not ready */}
+      {/* Fallback create button if balance check not ready - but still check allowance */}
       {(!balance || step === 'check') && (
         <button
           onClick={handleCreate}
-          disabled={isProcessing}
+          disabled={isProcessing || (allowance !== undefined && !safeCompare(allowance, entryFeeWei, 'gte'))}
           className="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-bold shadow-lg disabled:opacity-60 transition-all hover:shadow-xl"
         >
           {isPending && "Confirm in wallet..."}

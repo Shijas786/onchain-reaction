@@ -43,6 +43,9 @@ export const USDC_DECIMALS = 6
 // Convert human readable USDC amount to wei (6 decimals)
 export const parseUSDC = (amount: string | number): bigint => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isNaN(num) || !isFinite(num) || num < 0) {
+    return BigInt(0)
+  }
   return BigInt(Math.floor(num * 10 ** USDC_DECIMALS))
 }
 
