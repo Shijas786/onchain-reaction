@@ -16,11 +16,16 @@ interface BoardRendererProps {
 }
 
 // 3D Projection Constants
-const CELL_SIZE = 50; // Base cell size in world units
+const BASE_CELL_SIZE = 50; // Base cell size in world units
 const TILT_ANGLE = 0; // Radians (0 for top-down 2D)
 const FOV = 800; // Field of view (focal length)
 const CAMERA_Z = 600; // Distance from camera to center of board
 const CAMERA_Y_OFFSET = 0; // Centered vertically
+const MIN_CANVAS_WIDTH = 800;
+const MIN_CANVAS_HEIGHT = 600;
+const MAX_CANVAS_WIDTH = 1200;
+const MAX_CANVAS_HEIGHT = 1000;
+const PADDING = 100; // Padding around board
 
 const ORB_RADIUS = 18;
 
@@ -43,6 +48,30 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     clearExplosionQueue,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    
+    // Calculate dynamic canvas size and cell size based on board dimensions
+    const { canvasWidth, canvasHeight, cellSize } = useMemo(() => {
+        // Calculate required world space
+        const worldWidth = cols * BASE_CELL_SIZE;
+        const worldHeight = rows * BASE_CELL_SIZE;
+        
+        // Calculate required canvas size with padding
+        const requiredWidth = Math.min(MAX_CANVAS_WIDTH, Math.max(MIN_CANVAS_WIDTH, worldWidth + PADDING * 2));
+        const requiredHeight = Math.min(MAX_CANVAS_HEIGHT, Math.max(MIN_CANVAS_HEIGHT, worldHeight + PADDING * 2));
+        
+        // Calculate scale factor if board is too large
+        const widthScale = (requiredWidth - PADDING * 2) / worldWidth;
+        const heightScale = (requiredHeight - PADDING * 2) / worldHeight;
+        const scale = Math.min(widthScale, heightScale, 1); // Don't scale up, only down
+        
+        const finalCellSize = BASE_CELL_SIZE * scale;
+        
+        return {
+            canvasWidth: requiredWidth,
+            canvasHeight: requiredHeight,
+            cellSize: finalCellSize,
+        };
+    }, [rows, cols]);
     const [hoverCell, setHoverCell] = useState<{ r: number; c: number } | null>(null);
 
     // Animation State
@@ -145,8 +174,8 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                     const speed = Math.random() * 5 + 2;
                     const vz = Math.random() * 4 + 2;
                     particlesRef.current.push({
-                        x: (col - cols / 2 + 0.5) * CELL_SIZE,
-                        y: (row - rows / 2 + 0.5) * CELL_SIZE,
+                        x: (col - cols / 2 + 0.5) * cellSize,
+                        y: (row - rows / 2 + 0.5) * cellSize,
                         z: 10,
                         vx: Math.cos(angle) * speed,
                         vy: Math.sin(angle) * speed,
@@ -158,7 +187,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             });
             clearExplosionQueue();
         }
-    }, [explosionQueue, clearExplosionQueue, board, rows, cols]);
+    }, [explosionQueue, clearExplosionQueue, board, rows, cols, cellSize]);
 
     const drawOrbShape = useCallback((
         ctx: CanvasRenderingContext2D,
@@ -263,10 +292,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             ctx.clearRect(0, 0, width, height);
 
             // --- Draw Board Background ---
-            const xMin = -cols / 2 * CELL_SIZE;
-            const xMax = cols / 2 * CELL_SIZE;
-            const yMin = -rows / 2 * CELL_SIZE;
-            const yMax = rows / 2 * CELL_SIZE;
+            const xMin = -cols / 2 * cellSize;
+            const xMax = cols / 2 * cellSize;
+            const yMin = -rows / 2 * cellSize;
+            const yMax = rows / 2 * cellSize;
 
             const pTL = project(xMin, yMin, 0, width, height);
             const pTR = project(xMax, yMin, 0, width, height);
@@ -295,9 +324,9 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
 
             // Vertical Lines
             for (let c = 0; c <= cols; c++) {
-                const xWorld = (c - cols / 2) * CELL_SIZE;
-                const yStart = -rows / 2 * CELL_SIZE;
-                const yEnd = rows / 2 * CELL_SIZE;
+                const xWorld = (c - cols / 2) * cellSize;
+                const yStart = -rows / 2 * cellSize;
+                const yEnd = rows / 2 * cellSize;
 
                 const p1 = project(xWorld, yStart, 0, width, height);
                 const p2 = project(xWorld, yEnd, 0, width, height);
@@ -310,9 +339,9 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
 
             // Horizontal Lines
             for (let r = 0; r <= rows; r++) {
-                const yWorld = (r - rows / 2) * CELL_SIZE;
-                const xStart = -cols / 2 * CELL_SIZE;
-                const xEnd = cols / 2 * CELL_SIZE;
+                const yWorld = (r - rows / 2) * cellSize;
+                const xStart = -cols / 2 * cellSize;
+                const xEnd = cols / 2 * cellSize;
 
                 const p1 = project(xStart, yWorld, 0, width, height);
                 const p2 = project(xEnd, yWorld, 0, width, height);
@@ -335,8 +364,8 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                     if (!board || !board[r] || !board[r][c]) continue;
                     const cell = board[r][c];
                     if (cell.count > 0 && cell.owner) {
-                        const xWorld = (c - cols / 2 + 0.5) * CELL_SIZE;
-                        const yWorld = (r - rows / 2 + 0.5) * CELL_SIZE;
+                        const xWorld = (c - cols / 2 + 0.5) * cellSize;
+                        const yWorld = (r - rows / 2 + 0.5) * cellSize;
 
                         const p = project(xWorld, yWorld, 0, width, height);
                         drawOrbGroup(ctx, p.x, p.y, p.scale, cell.owner, cell.count);
@@ -352,10 +381,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 if (orb.progress >= 1) {
                     flyingOrbsRef.current.splice(i, 1);
                 } else {
-                    const startX = (orb.c - cols / 2 + 0.5) * CELL_SIZE;
-                    const startY = (orb.r - rows / 2 + 0.5) * CELL_SIZE;
-                    const endX = (orb.tc - cols / 2 + 0.5) * CELL_SIZE;
-                    const endY = (orb.tr - rows / 2 + 0.5) * CELL_SIZE;
+                    const startX = (orb.c - cols / 2 + 0.5) * cellSize;
+                    const startY = (orb.r - rows / 2 + 0.5) * cellSize;
+                    const endX = (orb.tc - cols / 2 + 0.5) * cellSize;
+                    const endY = (orb.tr - rows / 2 + 0.5) * cellSize;
 
                     const currX = startX + (endX - startX) * orb.progress;
                     const currY = startY + (endY - startY) * orb.progress;
@@ -410,7 +439,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         render(performance.now());
 
         return () => cancelAnimationFrame(animationFrameId);
-    }, [board, drawOrbGroup, drawOrbShape, rows, cols]);
+    }, [board, drawOrbGroup, drawOrbShape, rows, cols, cellSize, canvasWidth, canvasHeight]);
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (animating) return;
@@ -433,12 +462,12 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         const worldPos = unproject(sx, sy, canvasRef.current!.width, canvasRef.current!.height);
 
         // Convert World Pos to Row/Col
-        // xWorld = (c - COLS/2 + 0.5) * CELL_SIZE  <-- Wait, grid lines are at integers
-        // Grid lines: (c - COLS/2) * CELL_SIZE
+        // xWorld = (c - COLS/2 + 0.5) * cellSize  <-- Wait, grid lines are at integers
+        // Grid lines: (c - COLS/2) * cellSize
         // So cell 0 is from -COLS/2 to -COLS/2 + 1
 
-        const c = Math.floor(worldPos.x / CELL_SIZE + cols / 2);
-        const r = Math.floor(worldPos.y / CELL_SIZE + rows / 2);
+        const c = Math.floor(worldPos.x / cellSize + cols / 2);
+        const r = Math.floor(worldPos.y / cellSize + rows / 2);
 
         if (r >= 0 && r < rows && c >= 0 && c < cols) {
             onCellClick(r, c);
@@ -449,8 +478,8 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         <div className="flex justify-center items-center p-4">
             <canvas
                 ref={canvasRef}
-                width={800}
-                height={600}
+                width={canvasWidth}
+                height={canvasHeight}
                 onClick={handleCanvasClick}
                 className="cursor-pointer touch-none"
                 style={{
