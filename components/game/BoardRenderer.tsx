@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Board, Cell, PlayerColor } from "@/types/game";
-import { getMaxCapacity, getNeighbors } from "@/lib/gameLogic";
+import { getMaxCapacity } from "@/lib/gameLogic";
 import { soundManager } from "@/lib/sound";
 
 interface BoardRendererProps {
@@ -156,7 +156,12 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
 
                 explodingCellsRef.current.push({ r: row, c: col, timeLeft: 300 });
 
-                const neighbors = getNeighbors(row, col);
+                // Get neighbors with dynamic board dimensions
+                const neighbors: { r: number; c: number }[] = [];
+                if (row > 0) neighbors.push({ r: row - 1, c: col });
+                if (row < rows - 1) neighbors.push({ r: row + 1, c: col });
+                if (col > 0) neighbors.push({ r: row, c: col - 1 });
+                if (col < cols - 1) neighbors.push({ r: row, c: col + 1 });
                 neighbors.forEach(n => {
                     flyingOrbsRef.current.push({
                         r: row,
