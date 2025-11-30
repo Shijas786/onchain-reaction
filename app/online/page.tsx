@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { motion } from "framer-motion";
+import { DoodleBackground } from "@/components/ui/DoodleBackground";
 
 export default function OnlineMenu() {
     const [roomId, setRoomId] = useState("");
@@ -11,7 +12,7 @@ export default function OnlineMenu() {
 
     const handleJoin = () => {
         if (roomId.trim()) {
-            router.push(`/online/game/${roomId}`);
+            router.push(`/online/lobby/${roomId}`);
         }
     };
 
@@ -19,18 +20,19 @@ export default function OnlineMenu() {
         // Generate a random room ID or let the server handle it.
         // For now, we'll just generate a random 4-char code.
         const newRoomId = Math.random().toString(36).substring(2, 6).toUpperCase();
-        router.push(`/online/game/${newRoomId}?host=true`);
+        router.push(`/online/lobby/${newRoomId}?host=true`);
     };
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-slate-50">
-            <div className="w-full max-w-md space-y-8">
+        <main className="flex min-h-screen flex-col items-center justify-center p-8 relative overflow-hidden">
+            <DoodleBackground />
+            <div className="w-full max-w-md space-y-8 relative z-10">
                 <div className="text-center">
                     <h1 className="text-4xl font-black text-slate-800 mb-2">Online Multiplayer</h1>
                     <p className="text-slate-500">Play with friends remotely</p>
                 </div>
 
-                <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 space-y-6">
+                <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl border border-slate-200 space-y-6">
 
                     <div className="space-y-4">
                         <Button
@@ -69,7 +71,7 @@ export default function OnlineMenu() {
                 </div>
 
                 <div className="text-center">
-                    <Button variant="secondary" size="sm" onClick={() => router.back()} className="bg-slate-200 text-slate-600 hover:bg-slate-300 shadow-none">
+                    <Button variant="secondary" size="sm" onClick={() => router.back()} className="bg-white/80 text-slate-600 hover:bg-white shadow-none">
                         Back
                     </Button>
                 </div>

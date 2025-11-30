@@ -8,8 +8,12 @@
 }
 
 body {
-  background-color: #ffffff;
+  background-image: url('/superheroes.png');
+  background-repeat: repeat;
+  background-size: 300px;
+  background-color: #f0f0f0;
   color: var(--foreground);
+  animation: bg-scroll 20s linear infinite;
 }
 
 @layer utilities {

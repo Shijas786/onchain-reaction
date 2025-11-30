@@ -135,8 +135,22 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                     });
                 });
 
-                // Particles removed
-
+                // Particles
+                for (let i = 0; i < 8; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 5 + 2;
+                    const vz = Math.random() * 4 + 2;
+                    particlesRef.current.push({
+                        x: (col - COLS / 2 + 0.5) * CELL_SIZE,
+                        y: (row - ROWS / 2 + 0.5) * CELL_SIZE,
+                        z: 10,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        vz: vz,
+                        color: COLORS[color],
+                        life: 1.0
+                    });
+                }
             });
             clearExplosionQueue();
         }
@@ -185,32 +199,18 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
 
             ctx.save();
             ctx.translate(cx, cy);
-            // We don't rotate the context because that would flatten the orbs.
-            // Instead we calculate positions.
 
             const x1 = Math.cos(angle) * dist;
             const y1 = Math.sin(angle) * dist * 0.6; // Flatten Y for perspective effect
 
-            // Sort by depth (y) to draw back first
             const orbs = [
                 { x: x1, y: y1, z: Math.sin(angle) },
                 { x: -x1, y: -y1, z: -Math.sin(angle) }
-            ].sort((a, b) => a.z - b.z); // Draw back (negative z/y in 2d projection logic) first? 
-            // Actually in our tilt, lower Y on screen is further back? No, higher Y is closer?
-            // Let's just draw them.
+            ].sort((a, b) => a.z - b.z);
 
-            orbs.forEach(o => drawOrbShape(ctx, o.x, o.y, scale, color)); // Relative to cx, cy
-            // Wait, drawOrbShape takes absolute coords.
+            orbs.forEach(o => drawOrbShape(ctx, o.x, o.y, scale, color));
 
             ctx.restore();
-
-            // Let's redo this simply without context translate for clarity
-            const xOff = Math.cos(angle) * dist;
-            const yOff = Math.sin(angle) * dist; // We are in 2D screen space now
-
-            // Simple orbit
-            drawOrbShape(ctx, cx - xOff, cy - yOff, scale, color);
-            drawOrbShape(ctx, cx + xOff, cy + yOff, scale, color);
             return;
         }
 
@@ -219,7 +219,6 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             const dist = 14 * scale;
 
             const angles = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3];
-            // Sort by "y" to draw back ones first (pseudo depth sorting)
             const orbs = angles.map(a => {
                 const finalAngle = a + angle;
                 return {
@@ -251,13 +250,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             const width = canvas.width;
             const height = canvas.height;
 
-            // Clear & Background
-            // Use clearRect to let the CSS background show through, or fill with paper color
             ctx.clearRect(0, 0, width, height);
-
-            // Optional: Draw a paper texture or just keep it clean
-            // ctx.fillStyle = "#fdfbf7";
-            // ctx.fillRect(0, 0, width, height);
 
             // --- Draw Board Background ---
             const xMin = -COLS / 2 * CELL_SIZE;
@@ -323,9 +316,6 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             ctx.shadowBlur = 0; // Reset shadow for orbs
 
             // --- Draw Static Orbs ---
-            // We need to draw from back (top of screen) to front (bottom of screen) for correct occlusion
-            // In our coordinate system, lower Y world is further back.
-
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
                     const isExploding = explodingCellsRef.current.some(ec => ec.r === r && ec.c === c);
@@ -350,16 +340,14 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 if (orb.progress >= 1) {
                     flyingOrbsRef.current.splice(i, 1);
                 } else {
-                    // Interpolate in World Space
                     const startX = (orb.c - COLS / 2 + 0.5) * CELL_SIZE;
                     const startY = (orb.r - ROWS / 2 + 0.5) * CELL_SIZE;
                     const endX = (orb.tc - COLS / 2 + 0.5) * CELL_SIZE;
                     const endY = (orb.tr - ROWS / 2 + 0.5) * CELL_SIZE;
 
-                    // Add a parabolic arc for Z
                     const currX = startX + (endX - startX) * orb.progress;
                     const currY = startY + (endY - startY) * orb.progress;
-                    const arcHeight = 50 * Math.sin(orb.progress * Math.PI); // Jump effect
+                    const arcHeight = 50 * Math.sin(orb.progress * Math.PI);
                     const currZ = arcHeight;
 
                     const p = project(currX, currY, currZ, width, height);
@@ -367,8 +355,34 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 }
             }
 
-            // --- Draw Particles (Removed) ---
+            // --- Draw Particles ---
+            for (let i = particlesRef.current.length - 1; i >= 0; i--) {
+                const p = particlesRef.current[i];
+                p.life -= dt / 1000;
+                if (p.life <= 0) {
+                    particlesRef.current.splice(i, 1);
+                    continue;
+                }
 
+                p.x += p.vx;
+                p.y += p.vy;
+                p.z += p.vz;
+                p.vz -= 0.2; // Gravity
+
+                if (p.z < 0) {
+                    p.z = 0;
+                    p.vz *= -0.5; // Bounce
+                }
+
+                const proj = project(p.x, p.y, p.z, width, height);
+
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, 3 * proj.scale, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
 
             // Update Exploding Cells Timers
             for (let i = explodingCellsRef.current.length - 1; i >= 0; i--) {

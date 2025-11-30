@@ -34,7 +34,7 @@ export const getMaxCapacity = (row: number, col: number): number => {
     if (row === 0 || row === ROWS - 1) neighbors--;
     if (col === 0 || col === COLS - 1) neighbors--;
 
-    return neighbors - 1;
+    return neighbors;
 };
 
 export const isValidMove = (board: Board, row: number, col: number, playerColor: PlayerColor): boolean => {

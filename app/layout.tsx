@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "A cute and explosive chain reaction game!",
 };
 
-import { DoodleBackground } from "@/components/ui/DoodleBackground";
+
 
 export default function RootLayout({
   children,
@@ -25,7 +25,6 @@ export default function RootLayout({
       <body
         className={`${fredoka.variable} antialiased font-sans text-slate-900 overflow-hidden select-none touch-none`}
       >
-        <DoodleBackground />
         {children}
       </body>
     </html>

@@ -26,7 +26,7 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
         setGameState(prev => ({ ...prev, players: newPlayers, board: createBoard() }));
     }, [playerCount, customColors]);
 
-    const checkWinner = (board: Board, players: Player[], currentPlayerIndex: number) => {
+    const checkWinner = useCallback((board: Board, players: Player[], currentPlayerIndex: number) => {
         const playerOrbCounts: Record<string, number> = {};
         players.forEach(p => playerOrbCounts[p.color] = 0);
 
@@ -46,14 +46,13 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
             return activePlayers[0];
         }
         return null;
-    };
+    }, []);
 
     const processChainReaction = useCallback(async (currentBoard: Board, currentPlayerColor: PlayerColor) => {
-        let unstable = true;
         let board = JSON.parse(JSON.stringify(currentBoard)); // Deep copy
 
         const step = async () => {
-            const unstableCells = [];
+            const unstableCells: { r: number; c: number }[] = [];
             for (let r = 0; r < ROWS; r++) {
                 for (let c = 0; c < COLS; c++) {
                     if (board[r][c].count >= getMaxCapacity(r, c)) {
@@ -67,6 +66,56 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
                 setGameState(prev => {
                     const winner = checkWinner(board, prev.players, prev.currentPlayerIndex);
                     let nextIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
+
+                    // Filter out players who have no orbs left
+                    const playersWithOrbs = prev.players.filter(p => {
+                        let orbCount = 0;
+                        board.forEach((row: any) => row.forEach((cell: any) => {
+                            if (cell.owner === p.color) {
+                                orbCount++;
+                            }
+                        }));
+                        return orbCount > 0;
+                    });
+
+                    // If current player has no orbs, skip to next active player
+                    // But wait, we just finished a turn. The next player should be someone who is alive.
+                    // If nextIndex points to a dead player, skip them.
+
+                    // Simple skip logic:
+                    // We need to ensure we don't loop infinitely if everyone is dead (which shouldn't happen here if we check winner).
+                    // But let's just do a simple loop.
+
+                    let attempts = 0;
+                    while (attempts < prev.players.length) {
+                        const nextPlayer = prev.players[nextIndex];
+                        // Check if this player is alive (has orbs).
+                        // Note: We need to check the NEW board state for orbs.
+                        let hasOrbs = false;
+                        for (let r = 0; r < ROWS; r++) {
+                            for (let c = 0; c < COLS; c++) {
+                                if (board[r][c].owner === nextPlayer.color) {
+                                    hasOrbs = true;
+                                    break;
+                                }
+                            }
+                            if (hasOrbs) break;
+                        }
+
+                        // Also, if it's the very first round, everyone has 0 orbs but is alive.
+                        // So we should also check if totalOrbs > 0.
+                        // If totalOrbs < 2 (start of game), everyone is alive.
+
+                        let totalOrbs = 0;
+                        board.forEach((row: any) => row.forEach((cell: any) => { if (cell.owner) totalOrbs++; }));
+
+                        if (totalOrbs < 2 || hasOrbs) {
+                            break; // Found a valid next player
+                        }
+
+                        nextIndex = (nextIndex + 1) % prev.players.length;
+                        attempts++;
+                    }
 
                     return {
                         ...prev,
@@ -104,10 +153,6 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
             });
 
             board = nextBoard;
-
-            // Check for winner immediately after this step
-            // We need to access the latest players list. Since we are in a closure, we should use the functional update to peek at state or pass it in.
-            // Actually, let's just use the setGameState callback to check and decide whether to continue.
 
             let gameOver = false;
             setGameState(prev => {
