@@ -76,65 +76,66 @@ export const useLocalGame = (playerCount: number, customColors?: PlayerColor[]) 
                 // Animation done, switch turn
                 setGameState(prev => {
                     const winner = checkWinner(board, prev.players, prev.currentPlayerIndex);
-                    let nextIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
-
-                    // Filter out players who have no orbs left
-                    const playersWithOrbs = prev.players.filter(p => {
-                        let orbCount = 0;
-                        board.forEach((row: any) => row.forEach((cell: any) => {
-                            if (cell.owner === p.color) {
-                                orbCount++;
-                            }
-                        }));
-                        return orbCount > 0;
-                    });
-
-                    // If current player has no orbs, skip to next active player
-                    // But wait, we just finished a turn. The next player should be someone who is alive.
-                    // If nextIndex points to a dead player, skip them.
-
-                    // Simple skip logic:
-                    // We need to ensure we don't loop infinitely if everyone is dead (which shouldn't happen here if we check winner).
-                    // But let's just do a simple loop.
-
-                    let attempts = 0;
-                    while (attempts < prev.players.length) {
-                        const nextPlayer = prev.players[nextIndex];
-                        // Check if this player is alive (has orbs).
-                        // Note: We need to check the NEW board state for orbs.
-                        let hasOrbs = false;
-                        for (let r = 0; r < rows; r++) {
-                            for (let c = 0; c < cols; c++) {
-                                if (board[r][c].owner === nextPlayer.color) {
-                                    hasOrbs = true;
-                                    break;
-                                }
-                            }
-                            if (hasOrbs) break;
-                        }
-
-                        // Also, if it's the very first round, everyone has 0 orbs but is alive.
-                        // So we should also check if totalOrbs > 0.
-                        // If totalOrbs < 2 (start of game), everyone is alive.
-
-                        let totalOrbs = 0;
-                        board.forEach((row: any) => row.forEach((cell: any) => { if (cell.owner) totalOrbs++; }));
-
-                        if (totalOrbs < 2 || hasOrbs) {
-                            break; // Found a valid next player
-                        }
-
-                        nextIndex = (nextIndex + 1) % prev.players.length;
-                        attempts++;
+                    if (winner) {
+                        return {
+                            ...prev,
+                            board,
+                            isAnimating: false,
+                            winner,
+                            isGameOver: true
+                        };
                     }
+
+                    // Simple turn rotation: just move to next player in order
+                    // All players get turns, regardless of whether they have orbs yet
+                    const currentPlayer = prev.players[prev.currentPlayerIndex];
+                    let nextIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
+                    
+                    // Count orbs for each player to check if they're alive
+                    const playerOrbCounts: Record<string, number> = {};
+                    prev.players.forEach(p => playerOrbCounts[p.id] = 0);
+                    
+                    board.forEach((row: any) => row.forEach((cell: any) => {
+                        if (cell.owner) {
+                            const owner = prev.players.find(p => p.color === cell.owner);
+                            if (owner) {
+                                playerOrbCounts[owner.id] = (playerOrbCounts[owner.id] || 0) + cell.count;
+                            }
+                        }
+                    }));
+                    
+                    // Skip players with 0 orbs (eliminated), but only after everyone has had at least one turn
+                    const totalMoves = prev.players.reduce((sum, p) => {
+                        // Count how many times each player has placed an orb (rough estimate from orb counts)
+                        return sum + (playerOrbCounts[p.id] || 0);
+                    }, 0);
+                    
+                    // Only skip eliminated players if we're past the initial round (everyone has played at least once)
+                    const allPlayersHadFirstTurn = totalMoves >= prev.players.length;
+                    
+                    if (allPlayersHadFirstTurn) {
+                        // Skip players with 0 orbs (they're eliminated)
+                        let attempts = 0;
+                        while (attempts < prev.players.length) {
+                            const nextPlayer = prev.players[nextIndex];
+                            if (playerOrbCounts[nextPlayer.id] > 0) {
+                                break; // Found a player with orbs
+                            }
+                            nextIndex = (nextIndex + 1) % prev.players.length;
+                            attempts++;
+                        }
+                    }
+                    
+                    const nextPlayer = prev.players[nextIndex];
+                    console.log(`[Turn] ${currentPlayer.name} (${prev.currentPlayerIndex + 1}/${prev.players.length}) → ${nextPlayer.name} (${nextIndex + 1}/${prev.players.length})`);
 
                     return {
                         ...prev,
                         board,
                         isAnimating: false,
-                        currentPlayerIndex: nextIndex,
-                        winner: winner || null,
-                        isGameOver: !!winner
+                        currentPlayerIndex: nextIndex >= 0 ? nextIndex : 0,
+                        winner: null,
+                        isGameOver: false
                     };
                 });
                 return;
