@@ -23,11 +23,12 @@ export default function OnlineMenu() {
     }
   };
 
-  const handleMatchCreated = (matchId: number, chainId: number) => {
+  const handleMatchCreated = (matchId: number, chainId: number, roomCode?: string) => {
     // Navigate to lobby with match details
     const arenaAddress = ARENA_ADDRESSES[chainId];
+    const lobbyId = roomCode || matchId.toString();
     router.push(
-      `/online/lobby/${matchId}?host=true&chainId=${chainId}&arena=${arenaAddress}`
+      `/online/lobby/${lobbyId}?host=true&chainId=${chainId}&arena=${arenaAddress}&matchId=${matchId}`
     );
   };
 

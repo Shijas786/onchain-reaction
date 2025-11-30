@@ -10,6 +10,7 @@ import { LobbyJoinButton } from "@/components/web3/LobbyJoinButton";
 import { motion } from "framer-motion";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
 import { ARENA_ADDRESSES, CHAIN_IDS, getChainName, formatUSDC } from "@/lib/contracts";
+import { formatRoomCode } from "@/lib/roomCode";
 
 interface Player {
   id: string;
@@ -26,7 +27,9 @@ function LobbyContent() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
 
-  const matchId = parseInt(params.id as string);
+  const roomCode = params.id as string;
+  const matchIdParam = searchParams.get("matchId");
+  const matchId = matchIdParam ? parseInt(matchIdParam) : parseInt(params.id as string);
   const isHost = searchParams.get("host") === "true";
   const chainIdParam = searchParams.get("chainId");
   const arenaParam = searchParams.get("arena");
@@ -135,7 +138,16 @@ function LobbyContent() {
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-black text-slate-800">Match Lobby</h1>
-          <div className="flex items-center justify-center gap-3">
+          {/* Room Code Display */}
+          <div className="inline-block bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 px-6 py-3 rounded-full shadow-lg">
+            <p className="text-xs text-white/80 font-bold mb-1 uppercase tracking-wider">
+              Room Code
+            </p>
+            <p className="text-3xl font-black text-white tracking-widest font-mono">
+              {formatRoomCode(roomCode)}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             <span
               className={`px-3 py-1 rounded-full text-xs font-bold ${
                 chainId === CHAIN_IDS.BASE
