@@ -13,6 +13,8 @@ import {
 export default __t.row({
   lobbyId: __t.string().primaryKey(),
   boardJson: __t.string(),
+  rows: __t.u32(),
+  cols: __t.u32(),
   currentPlayerIndex: __t.u32(),
   isAnimating: __t.bool(),
   moveCount: __t.u32(),

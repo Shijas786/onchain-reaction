@@ -7,6 +7,7 @@ import { BoardRenderer } from "@/components/game/BoardRenderer";
 import { Button } from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlayerColor } from "@/types/game";
+import { getBoardSize } from "@/lib/boardSize";
 
 function LocalGameContent() {
     const searchParams = useSearchParams();
@@ -24,6 +25,7 @@ function LocalGameContent() {
 
     const { gameState, makeMove, explosionQueue, clearExplosionQueue } = useLocalGame(playerCount, customColors);
     const [showWinModal, setShowWinModal] = useState(false);
+    const { rows, cols } = getBoardSize(playerCount);
 
     useEffect(() => {
         if (gameState.winner) {
@@ -70,6 +72,8 @@ function LocalGameContent() {
             <div className="relative p-0 bg-transparent rounded-none shadow-none border-none">
                 <BoardRenderer
                     board={gameState.board}
+                    rows={rows}
+                    cols={cols}
                     onCellClick={makeMove}
                     animating={gameState.isAnimating}
                     explosionQueue={explosionQueue}

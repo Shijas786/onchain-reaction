@@ -218,6 +218,8 @@ function OnlineGameContent() {
       <div className="relative p-0 rounded-2xl overflow-hidden shadow-2xl">
         <BoardRenderer
           board={gameBoard}
+          rows={gameState?.rows || 9}
+          cols={gameState?.cols || 6}
           onCellClick={handleCellClick}
           animating={gameState?.isAnimating || false}
           explosionQueue={explosionQueue}

@@ -2,10 +2,32 @@ use spacetimedb::{ReducerContext, Table, Identity, Timestamp};
 use serde::{Deserialize, Serialize};
 
 // ============================================================================
-// CONSTANTS
+// BOARD SIZE CONFIGURATION
 // ============================================================================
-const ROWS: usize = 9;
-const COLS: usize = 6;
+
+/// Get board size based on number of players
+fn get_board_size(max_players: u32) -> (usize, usize) {
+    match max_players {
+        2 => (9, 6),      // Classic setup
+        3 | 4 => (12, 10), // More space for 3-4 players
+        5 => (15, 15),    // Large board for 5 players
+        6 => (15, 15),    // Large board for 6 players
+        7 => (20, 20),    // Very large for 7 players
+        8 => (20, 20),    // Maximum size for 8 players
+        _ => {
+            // Fallback logic
+            if max_players <= 2 {
+                (9, 6)
+            } else if max_players <= 4 {
+                (12, 10)
+            } else if max_players <= 6 {
+                (15, 15)
+            } else {
+                (20, 20)
+            }
+        }
+    }
+}
 
 // ============================================================================
 // TABLES
@@ -53,6 +75,8 @@ pub struct GameState {
     #[primary_key]
     pub lobby_id: String,
     pub board_json: String,       // JSON serialized board
+    pub rows: u32,                // Board height
+    pub cols: u32,                // Board width
     pub current_player_index: u32,
     pub is_animating: bool,
     pub move_count: u32,
@@ -85,15 +109,15 @@ pub struct Cell {
 
 type Board = Vec<Vec<Cell>>;
 
-fn create_empty_board() -> Board {
-    (0..ROWS)
-        .map(|_| (0..COLS).map(|_| Cell::default()).collect())
+fn create_empty_board(rows: usize, cols: usize) -> Board {
+    (0..rows)
+        .map(|_| (0..cols).map(|_| Cell::default()).collect())
         .collect()
 }
 
-fn get_max_capacity(row: usize, col: usize) -> u32 {
-    let is_corner = (row == 0 || row == ROWS - 1) && (col == 0 || col == COLS - 1);
-    let is_edge = row == 0 || row == ROWS - 1 || col == 0 || col == COLS - 1;
+fn get_max_capacity(row: usize, col: usize, rows: usize, cols: usize) -> u32 {
+    let is_corner = (row == 0 || row == rows - 1) && (col == 0 || col == cols - 1);
+    let is_edge = row == 0 || row == rows - 1 || col == 0 || col == cols - 1;
 
     if is_corner { 2 } else if is_edge { 3 } else { 4 }
 }
@@ -184,11 +208,16 @@ pub fn create_lobby(
         joined_at: now,
     });
 
-    // Create empty game state
-    let board = create_empty_board();
+    // Calculate board size based on max players
+    let (rows, cols) = get_board_size(max_players);
+    let board = create_empty_board(rows, cols);
+    
+    // Create empty game state with board dimensions
     ctx.db.game_state().insert(GameState {
         lobby_id: lobby_id.clone(),
         board_json: serde_json::to_string(&board).unwrap(),
+        rows: rows as u32,
+        cols: cols as u32,
         current_player_index: 0,
         is_animating: false,
         move_count: 0,
@@ -364,10 +393,14 @@ pub fn make_move(
     // Parse board
     let mut board: Board = serde_json::from_str(&game_state.board_json).unwrap();
 
+    // Get board dimensions from game state
+    let rows = game_state.rows as usize;
+    let cols = game_state.cols as usize;
+    
     // Validate move
     let r = row as usize;
     let c = col as usize;
-    if r >= ROWS || c >= COLS {
+    if r >= rows || c >= cols {
         panic!("Invalid position");
     }
 
@@ -384,9 +417,9 @@ pub fn make_move(
     loop {
         let mut had_explosion = false;
 
-        for row_idx in 0..ROWS {
-            for col_idx in 0..COLS {
-                let max_cap = get_max_capacity(row_idx, col_idx);
+        for row_idx in 0..rows {
+            for col_idx in 0..cols {
+                let max_cap = get_max_capacity(row_idx, col_idx, rows, cols);
                 if board[row_idx][col_idx].orbs >= max_cap {
                     had_explosion = true;
 
@@ -399,7 +432,7 @@ pub fn make_move(
                     for (dr, dc) in neighbors {
                         let nr = row_idx as i32 + dr;
                         let nc = col_idx as i32 + dc;
-                        if nr >= 0 && nr < ROWS as i32 && nc >= 0 && nc < COLS as i32 {
+                        if nr >= 0 && nr < rows as i32 && nc >= 0 && nc < cols as i32 {
                             let nr = nr as usize;
                             let nc = nc as usize;
                             board[nr][nc].orbs += 1;
@@ -493,6 +526,8 @@ pub fn make_move(
 
     ctx.db.game_state().lobby_id().update(GameState {
         board_json: serde_json::to_string(&board).unwrap(),
+        rows: game_state.rows,
+        cols: game_state.cols,
         current_player_index: new_player_index,
         move_count: game_state.move_count + 1,
         last_move_at: ctx.timestamp,

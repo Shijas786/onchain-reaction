@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from "react";
-import { Board, Cell, PlayerColor, ROWS, COLS } from "@/types/game";
+import { Board, Cell, PlayerColor } from "@/types/game";
 import { getMaxCapacity, getNeighbors } from "@/lib/gameLogic";
 import { soundManager } from "@/lib/sound";
 
 interface BoardRendererProps {
     board: Board;
+    rows: number;
+    cols: number;
     onCellClick: (row: number, col: number) => void;
     animating: boolean;
     explosionQueue: { row: number; col: number }[];
@@ -33,6 +35,8 @@ const COLORS: Record<PlayerColor, string> = {
 
 export const BoardRenderer: React.FC<BoardRendererProps> = ({
     board,
+    rows,
+    cols,
     onCellClick,
     animating,
     explosionQueue,
@@ -141,8 +145,8 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                     const speed = Math.random() * 5 + 2;
                     const vz = Math.random() * 4 + 2;
                     particlesRef.current.push({
-                        x: (col - COLS / 2 + 0.5) * CELL_SIZE,
-                        y: (row - ROWS / 2 + 0.5) * CELL_SIZE,
+                        x: (col - cols / 2 + 0.5) * CELL_SIZE,
+                        y: (row - rows / 2 + 0.5) * CELL_SIZE,
                         z: 10,
                         vx: Math.cos(angle) * speed,
                         vy: Math.sin(angle) * speed,
@@ -154,7 +158,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             });
             clearExplosionQueue();
         }
-    }, [explosionQueue, clearExplosionQueue, board]);
+    }, [explosionQueue, clearExplosionQueue, board, rows, cols]);
 
     const drawOrbShape = useCallback((
         ctx: CanvasRenderingContext2D,
@@ -259,10 +263,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             ctx.clearRect(0, 0, width, height);
 
             // --- Draw Board Background ---
-            const xMin = -COLS / 2 * CELL_SIZE;
-            const xMax = COLS / 2 * CELL_SIZE;
-            const yMin = -ROWS / 2 * CELL_SIZE;
-            const yMax = ROWS / 2 * CELL_SIZE;
+            const xMin = -cols / 2 * CELL_SIZE;
+            const xMax = cols / 2 * CELL_SIZE;
+            const yMin = -rows / 2 * CELL_SIZE;
+            const yMax = rows / 2 * CELL_SIZE;
 
             const pTL = project(xMin, yMin, 0, width, height);
             const pTR = project(xMax, yMin, 0, width, height);
@@ -290,10 +294,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             ctx.shadowBlur = 0;
 
             // Vertical Lines
-            for (let c = 0; c <= COLS; c++) {
-                const xWorld = (c - COLS / 2) * CELL_SIZE;
-                const yStart = -ROWS / 2 * CELL_SIZE;
-                const yEnd = ROWS / 2 * CELL_SIZE;
+            for (let c = 0; c <= cols; c++) {
+                const xWorld = (c - cols / 2) * CELL_SIZE;
+                const yStart = -rows / 2 * CELL_SIZE;
+                const yEnd = rows / 2 * CELL_SIZE;
 
                 const p1 = project(xWorld, yStart, 0, width, height);
                 const p2 = project(xWorld, yEnd, 0, width, height);
@@ -305,10 +309,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             }
 
             // Horizontal Lines
-            for (let r = 0; r <= ROWS; r++) {
-                const yWorld = (r - ROWS / 2) * CELL_SIZE;
-                const xStart = -COLS / 2 * CELL_SIZE;
-                const xEnd = COLS / 2 * CELL_SIZE;
+            for (let r = 0; r <= rows; r++) {
+                const yWorld = (r - rows / 2) * CELL_SIZE;
+                const xStart = -cols / 2 * CELL_SIZE;
+                const xEnd = cols / 2 * CELL_SIZE;
 
                 const p1 = project(xStart, yWorld, 0, width, height);
                 const p2 = project(xEnd, yWorld, 0, width, height);
@@ -322,15 +326,15 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             ctx.shadowBlur = 0; // Reset shadow for orbs
 
             // --- Draw Static Orbs ---
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
                     const isExploding = explodingCellsRef.current.some(ec => ec.r === r && ec.c === c);
                     if (isExploding) continue;
 
                     const cell = board[r][c];
                     if (cell.count > 0 && cell.owner) {
-                        const xWorld = (c - COLS / 2 + 0.5) * CELL_SIZE;
-                        const yWorld = (r - ROWS / 2 + 0.5) * CELL_SIZE;
+                        const xWorld = (c - cols / 2 + 0.5) * CELL_SIZE;
+                        const yWorld = (r - rows / 2 + 0.5) * CELL_SIZE;
 
                         const p = project(xWorld, yWorld, 0, width, height);
                         drawOrbGroup(ctx, p.x, p.y, p.scale, cell.owner, cell.count);
@@ -346,10 +350,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 if (orb.progress >= 1) {
                     flyingOrbsRef.current.splice(i, 1);
                 } else {
-                    const startX = (orb.c - COLS / 2 + 0.5) * CELL_SIZE;
-                    const startY = (orb.r - ROWS / 2 + 0.5) * CELL_SIZE;
-                    const endX = (orb.tc - COLS / 2 + 0.5) * CELL_SIZE;
-                    const endY = (orb.tr - ROWS / 2 + 0.5) * CELL_SIZE;
+                    const startX = (orb.c - cols / 2 + 0.5) * CELL_SIZE;
+                    const startY = (orb.r - rows / 2 + 0.5) * CELL_SIZE;
+                    const endX = (orb.tc - cols / 2 + 0.5) * CELL_SIZE;
+                    const endY = (orb.tr - rows / 2 + 0.5) * CELL_SIZE;
 
                     const currX = startX + (endX - startX) * orb.progress;
                     const currY = startY + (endY - startY) * orb.progress;
@@ -404,7 +408,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         render(performance.now());
 
         return () => cancelAnimationFrame(animationFrameId);
-    }, [board, drawOrbGroup, drawOrbShape]);
+    }, [board, drawOrbGroup, drawOrbShape, rows, cols]);
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (animating) return;
@@ -431,10 +435,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         // Grid lines: (c - COLS/2) * CELL_SIZE
         // So cell 0 is from -COLS/2 to -COLS/2 + 1
 
-        const c = Math.floor(worldPos.x / CELL_SIZE + COLS / 2);
-        const r = Math.floor(worldPos.y / CELL_SIZE + ROWS / 2);
+        const c = Math.floor(worldPos.x / CELL_SIZE + cols / 2);
+        const r = Math.floor(worldPos.y / CELL_SIZE + rows / 2);
 
-        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+        if (r >= 0 && r < rows && c >= 0 && c < cols) {
             onCellClick(r, c);
         }
     };

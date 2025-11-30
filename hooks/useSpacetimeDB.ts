@@ -50,6 +50,8 @@ export type LobbyPlayer = {
 export type GameState = {
   lobbyId: string;
   boardJson: string;
+  rows: number;
+  cols: number;
   currentPlayerIndex: number;
   isAnimating: boolean;
   moveCount: number;
