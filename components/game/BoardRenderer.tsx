@@ -514,7 +514,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 style={{
                     width: '100%',
                     maxWidth: 'min(100vw - 0.5rem, 1400px)', // Less padding on mobile
-                    maxHeight: '90vh', // Increased for better mobile visibility
+                    maxHeight: 'calc(100vh - 120px)', // Use most of viewport height, leave space for header
                     height: 'auto',
                     aspectRatio: `${canvasWidth} / ${canvasHeight}`,
                     background: 'transparent',
