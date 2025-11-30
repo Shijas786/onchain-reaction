@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { OrbMascot } from "@/components/ui/OrbMascot";
+import { DoodleText } from "@/components/ui/DoodleText";
 
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-transparent relative overflow-hidden">
-      {/* Background decoration */}
+      {/* Wallet Connect Button - Top Right */}
+      <div className="absolute top-4 right-4 z-20">
+        <appkit-button />
+      </div>
+
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
         <div className="absolute top-10 left-10 w-32 h-32 bg-[#FF9AA2] rounded-full blur-xl border-4 border-black" />
@@ -16,12 +20,9 @@ export default function Home() {
       </div>
 
       <div className="z-10 flex flex-col items-center gap-8">
-        <OrbMascot />
+        <DoodleText />
 
         <div className="text-center space-y-2">
-          <h1 className="text-5xl font-black text-slate-800 tracking-tight">
-            Chain Reaction
-          </h1>
           <p className="text-2xl font-medium text-slate-500">Orbs Edition</p>
         </div>
 
@@ -41,16 +42,23 @@ export default function Home() {
               size="lg"
               className="w-full border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-[#C7CEEA] text-black font-bold rounded-2xl"
             >
-              Online Multiplayer
+              Online Arena 💰
             </Button>
           </Link>
-          <Button
-            variant="success"
-            size="md"
-            className="w-full border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-[#B5EAD7] text-black font-bold rounded-2xl"
-          >
-            How to Play
-          </Button>
+          <Link href="/profile/prizes" className="w-full">
+            <Button
+              variant="success"
+              size="md"
+              className="w-full border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-[#B5EAD7] text-black font-bold rounded-2xl"
+            >
+              🏆 My Prizes
+            </Button>
+          </Link>
+        </div>
+
+        {/* Web3 Info */}
+        <div className="text-center text-xs text-slate-400 mt-4">
+          <p>Play for USDC on Base & Arbitrum</p>
         </div>
       </div>
     </main>
