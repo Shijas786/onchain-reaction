@@ -50,6 +50,7 @@ pub struct Lobby {
 
 /// LobbyPlayer - Players in a lobby
 #[spacetimedb::table(name = lobby_player, public)]
+#[derive(Clone)]
 pub struct LobbyPlayer {
     #[primary_key]
     pub id: String,              // lobbyId + "_" + identity hex
@@ -344,7 +345,7 @@ pub fn start_game(ctx: &ReducerContext, lobby_id: String) {
 
     // Set initial turn deadline (30 seconds)
     // 30 seconds = 30 * 1,000,000 microseconds
-    let deadline = ctx.timestamp.plus(std::time::Duration::from_secs(30));
+    let deadline = ctx.timestamp + std::time::Duration::from_secs(30);
     
     let game_state = ctx.db.game_state().lobby_id().find(&lobby_id).expect("Game state not found");
     ctx.db.game_state().lobby_id().update(GameState {
@@ -533,7 +534,7 @@ pub fn make_move(
     };
 
     // Set new turn deadline (30 seconds from now)
-    let new_deadline = ctx.timestamp.plus(std::time::Duration::from_secs(30));
+    let new_deadline = ctx.timestamp + std::time::Duration::from_secs(30);
 
     ctx.db.game_state().lobby_id().update(GameState {
         board_json: serde_json::to_string(&board).unwrap(),
@@ -623,7 +624,7 @@ pub fn claim_timeout(ctx: &ReducerContext, lobby_id: String) {
         };
 
         // Set new turn deadline
-        let new_deadline = ctx.timestamp.plus(std::time::Duration::from_secs(30));
+        let new_deadline = ctx.timestamp + std::time::Duration::from_secs(30);
 
         ctx.db.game_state().lobby_id().update(GameState {
             current_player_index: new_player_index,
