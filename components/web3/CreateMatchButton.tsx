@@ -465,11 +465,25 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             <button
               key={chainId}
               onClick={() => setSelectedChain(chainId)}
-              className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all ${selectedChain === chainId
+              className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${selectedChain === chainId
                 ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
             >
+              {chainId === CHAIN_IDS.BASE && (
+                <img
+                  src="/assets/base.jpg"
+                  alt="Base"
+                  className="w-5 h-5 rounded-full"
+                />
+              )}
+              {chainId === CHAIN_IDS.ARBITRUM && (
+                <img
+                  src="/assets/arbitrum.jpg"
+                  alt="Arbitrum"
+                  className="w-5 h-5 rounded-full"
+                />
+              )}
               {getChainName(chainId)}
             </button>
           ))}
@@ -492,14 +506,14 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
               >
                 {token === 'USDC' && (
                   <img
-                    src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png"
+                    src="/assets/usdc.jpg"
                     alt="USDC"
                     className="w-5 h-5 rounded-full"
                   />
                 )}
                 {token === 'JESSE' && (
                   <img
-                    src="https://pbs.twimg.com/profile_images/1858428864826900480/wF139dAu_400x400.jpg"
+                    src="/assets/jesse.jpg"
                     alt="JESSE"
                     className="w-5 h-5 rounded-full"
                   />
