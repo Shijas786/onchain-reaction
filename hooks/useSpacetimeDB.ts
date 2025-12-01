@@ -209,6 +209,11 @@ export function useLobby(lobbyId: string | null) {
 
     conn.db.lobby.onUpdate((ctx, oldRow, newRow) => {
       if (newRow.id === lobbyId) {
+        console.log(`[useLobby] Lobby status updated:`, {
+          oldStatus: oldRow.status,
+          newStatus: newRow.status,
+          lobbyId: newRow.id
+        });
         setLobby(newRow as unknown as Lobby);
       }
     });
@@ -347,13 +352,25 @@ export function useLobby(lobbyId: string | null) {
 
   const startGame = useCallback(async (): Promise<boolean> => {
     const conn = getDbConnection();
-    if (!conn || !lobbyId) return false;
+    if (!conn || !lobbyId) {
+      console.error("[useLobby] Cannot start game: no connection or lobbyId");
+      return false;
+    }
 
     try {
+      console.log("[useLobby] Calling startGame reducer for lobby:", lobbyId);
       conn.reducers.startGame({ lobbyId });
+      console.log("[useLobby] startGame reducer called successfully");
       return true;
-    } catch (err) {
-      console.error("Failed to start game:", err);
+    } catch (err: any) {
+      console.error("[useLobby] Failed to start game:", err);
+      // Log detailed error info
+      if (err?.message) {
+        console.error("[useLobby] Error message:", err.message);
+      }
+      if (err?.stack) {
+        console.error("[useLobby] Error stack:", err.stack);
+      }
       return false;
     }
   }, [lobbyId]);

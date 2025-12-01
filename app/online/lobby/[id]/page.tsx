@@ -212,6 +212,16 @@ function LobbyContent() {
   const handleStartGame = async () => {
     if (!players || players.length < 2) {
       console.error('Need at least 2 players to start');
+      alert('Need at least 2 players to start the game');
+      return;
+    }
+
+    // Check if all players have deposited
+    const allDeposited = players.every(p => p.hasDeposited);
+    if (!allDeposited) {
+      const undeposited = players.filter(p => !p.hasDeposited).map(p => p.name).join(', ');
+      console.error('Not all players have deposited:', undeposited);
+      alert(`Cannot start: Waiting for deposits from: ${undeposited}`);
       return;
     }
 
@@ -219,11 +229,15 @@ function LobbyContent() {
     try {
       // Start game in SpacetimeDB
       if (isSpacetimeConnected && startSpacetimeGame) {
-        console.log('[LobbyPage] Starting game in SpacetimeDB...');
+        console.log('[LobbyPage] Starting game in SpacetimeDB...', {
+          players: players.map(p => ({ name: p.name, hasDeposited: p.hasDeposited })),
+          lobbyStatus: spacetimeLobby?.status
+        });
         const started = await startSpacetimeGame();
         if (!started) {
           console.error('Failed to start game in SpacetimeDB');
           setIsStarting(false);
+          alert('Failed to start game. Please check console for details and try again.');
           return;
         }
         console.log('[LobbyPage] Game start command sent. Waiting for status to update...');
@@ -232,6 +246,7 @@ function LobbyContent() {
       } else {
         console.error('[LobbyPage] Cannot start game: not connected or startGame function missing');
         setIsStarting(false);
+        alert('Cannot start game: Not connected to SpacetimeDB');
       }
     } catch (err) {
       console.error('Failed to start game:', err);
@@ -355,6 +370,15 @@ function LobbyContent() {
                   <div className="text-sm text-slate-400 font-mono truncate">
                     {player.farcasterHandle}
                   </div>
+                  {player.hasDeposited !== undefined && (
+                    <div className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                      player.hasDeposited 
+                        ? "bg-emerald-100 text-emerald-700" 
+                        : "bg-amber-100 text-amber-700"
+                    }`}>
+                      {player.hasDeposited ? "DEPOSITED" : "PENDING"}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))}
