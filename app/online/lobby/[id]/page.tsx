@@ -147,6 +147,18 @@ function LobbyContent() {
     }
   }, [isSpacetimeConnected, match, spacetimeLobby, matchIdParam, address, chainId, arenaAddress, roomCode, matchId]);
 
+  // Auto-confirm host deposit if needed (host pays on creation)
+  const { confirmDeposit } = useLobby(roomCode);
+  useEffect(() => {
+    if (isSpacetimeConnected && spacetimeLobby && address && spacetimePlayers) {
+      const hostPlayer = spacetimePlayers.find(p => p.address.toLowerCase() === spacetimeLobby.hostAddress.toLowerCase());
+      if (hostPlayer && !hostPlayer.hasDeposited && hostPlayer.address.toLowerCase() === address.toLowerCase()) {
+        console.log('[LobbyPage] Host has not deposited in SpacetimeDB. Confirming now...');
+        confirmDeposit(roomCode, address);
+      }
+    }
+  }, [isSpacetimeConnected, spacetimeLobby, address, spacetimePlayers, roomCode, confirmDeposit]);
+
   // Update players list - prefer SpacetimeDB data, fallback to contract
   useEffect(() => {
     if (spacetimePlayers && spacetimePlayers.length > 0) {
@@ -374,8 +386,8 @@ function LobbyContent() {
                   </div>
                   {player.hasDeposited !== undefined && (
                     <div className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${player.hasDeposited
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-amber-100 text-amber-700"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-amber-100 text-amber-700"
                       }`}>
                       {player.hasDeposited ? "DEPOSITED" : "PENDING"}
                     </div>

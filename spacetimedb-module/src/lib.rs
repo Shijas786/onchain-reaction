@@ -200,7 +200,7 @@ pub fn create_lobby(
         color: PLAYER_COLORS[0].to_string(),
         is_host: true,
         is_alive: true,
-        has_deposited: false,
+        has_deposited: true, // Host pays on creation
         joined_at: now,
     });
 
