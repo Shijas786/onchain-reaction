@@ -36,7 +36,7 @@ export default function PrizesPage() {
       try {
         const res = await fetch(`/api/my-prizes?wallet=${address}`);
         const data = await res.json();
-        
+
         if (data.error) {
           setError(data.error);
         } else {
@@ -65,7 +65,7 @@ export default function PrizesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black text-slate-800">Your Prizes</h1>
+            <h1 className="text-3xl font-black text-slate-800">Rewards History</h1>
             <p className="text-slate-500 text-sm">Claim your winnings from matches</p>
           </div>
           <Button
@@ -156,7 +156,7 @@ export default function PrizesPage() {
                   {prizes.length} available
                 </span>
               </div>
-              
+
               {prizes.map((prize, index) => (
                 <motion.div
                   key={prize.id}
