@@ -219,19 +219,24 @@ function LobbyContent() {
     try {
       // Start game in SpacetimeDB
       if (isSpacetimeConnected && startSpacetimeGame) {
+        console.log('[LobbyPage] Starting game in SpacetimeDB...');
         const started = await startSpacetimeGame();
         if (!started) {
           console.error('Failed to start game in SpacetimeDB');
           setIsStarting(false);
           return;
         }
+        console.log('[LobbyPage] Game start command sent. Waiting for status to update...');
+        // Don't navigate manually - let the useEffect handle redirect when status becomes "live"
+        // The redirect will happen automatically via the useEffect that watches spacetimeLobby?.status
+      } else {
+        console.error('[LobbyPage] Cannot start game: not connected or startGame function missing');
+        setIsStarting(false);
       }
-
-      // Navigate to game page (use roomCode as lobbyId)
-      router.push(`/online/game/${roomCode}?chainId=${chainId}&arena=${arenaAddress}`);
     } catch (err) {
       console.error('Failed to start game:', err);
       setIsStarting(false);
+      alert('Failed to start game. Please try again.');
     }
   };
 
