@@ -46,6 +46,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const screenCellsRef = useRef<Array<Array<{ x1: number, y1: number, x2: number, y2: number }>>>([]);
 
     // Handle Window Resize
     useEffect(() => {
@@ -110,32 +111,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         const y_rot = y * cosT - z * sinT;
         const z_rot = y * sinT + z * cosT;
 
-        // 3. Apply Perspective (Simplified for 2D fitting)
-        // We use the calculated 'scale' directly instead of FOV/z_depth for the main scaling
-        // But we can still apply a small perspective effect if z != 0
-
-        // For top-down 2D (TILT_ANGLE = 0), z_rot is just z (height).
-        // We can simulate height by shifting Y slightly or scaling slightly.
-        // Let's keep it simple: apply global scale.
-
-        // If we want 3D height effect (paralax), we can adjust y based on z.
-        // y_screen = y * scale - z * scale * 0.5 (fake 3D)
-
         const sx = x * scale + offsetX;
         const sy = (y_rot - z) * scale + offsetY; // Simple z-height effect
 
         return { x: sx, y: sy, scale: scale, depth: z_rot };
-    };
-
-    // Helper: Unproject 2D screen coordinates to 3D world coordinates (assuming z=0 plane)
-    const unproject = (sx: number, sy: number) => {
-        // sx = x * scale + offsetX
-        // sy = y * scale + offsetY (assuming z=0)
-
-        const x = (sx - offsetX) / scale;
-        const y = (sy - offsetY) / scale;
-
-        return { x, y };
     };
 
     useEffect(() => {
@@ -223,8 +202,6 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         color: PlayerColor,
         count: number
     ) => {
-        // const radius = ORB_RADIUS * scale; // Unused
-
         if (count === 1) {
             drawOrbShape(ctx, cx, cy, scale, color);
             return;
@@ -280,17 +257,29 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         let animationFrameId: number;
         let lastTime = performance.now();
 
+        // Initialize screenCellsRef
+        screenCellsRef.current = Array(rows).fill(null).map(() => Array(cols).fill(null));
+
         const render = (time: number) => {
             const dt = time - lastTime;
             lastTime = time;
 
             const width = dimensions.width;
             const height = dimensions.height;
+            const dpr = window.devicePixelRatio || 1;
 
-            // Ensure canvas buffer matches display size
-            if (canvas.width !== width || canvas.height !== height) {
-                canvas.width = width;
-                canvas.height = height;
+            // Ensure canvas buffer matches display size * DPR
+            const displayWidth = Math.floor(width * dpr);
+            const displayHeight = Math.floor(height * dpr);
+
+            if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+                // Important: Reset scale after resize
+                ctx.scale(dpr, dpr);
+            } else {
+                // Reset transform to clear and redraw
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             }
 
             ctx.clearRect(0, 0, width, height);
@@ -359,9 +348,23 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
 
             ctx.shadowBlur = 0; // Reset shadow for orbs
 
-            // --- Draw Static Orbs ---
+            // --- Precompute Screen Rects & Draw Static Orbs ---
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
+                    // Compute bounding box for hit testing
+                    const xWorld = (c - cols / 2) * BASE_CELL_SIZE;
+                    const yWorld = (r - rows / 2) * BASE_CELL_SIZE;
+                    const p1 = project(xWorld, yWorld, 0);
+                    const p2 = project(xWorld + BASE_CELL_SIZE, yWorld + BASE_CELL_SIZE, 0);
+
+                    // Store logical coordinates
+                    screenCellsRef.current[r][c] = {
+                        x1: Math.min(p1.x, p2.x),
+                        y1: Math.min(p1.y, p2.y),
+                        x2: Math.max(p1.x, p2.x),
+                        y2: Math.max(p1.y, p2.y)
+                    };
+
                     const isExploding = explodingCellsRef.current.some(ec => ec.r === r && ec.c === c);
                     if (isExploding) continue;
 
@@ -371,10 +374,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                     if (cell.count > 0 && cell.owner) {
                         // Ensure color is valid, fallback to red if not
                         const validColor: PlayerColor = COLORS[cell.owner] ? cell.owner : 'red';
-                        const xWorld = (c - cols / 2 + 0.5) * BASE_CELL_SIZE;
-                        const yWorld = (r - rows / 2 + 0.5) * BASE_CELL_SIZE;
+                        const xCenter = (c - cols / 2 + 0.5) * BASE_CELL_SIZE;
+                        const yCenter = (r - rows / 2 + 0.5) * BASE_CELL_SIZE;
 
-                        const p = project(xWorld, yWorld, 0);
+                        const p = project(xCenter, yCenter, 0);
                         drawOrbGroup(ctx, p.x, p.y, p.scale, validColor, cell.count);
                     }
                 }
@@ -453,24 +456,27 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        // Calculate logical click coordinates
+        // rect.width is visual width. dimensions.width is logical width.
+        // If unscaled, they match. If scaled by ZoomPanPinch, they differ.
+        // We want coordinates relative to the logical canvas space (before DPR scaling).
+        const scaleX = dimensions.width / rect.width;
+        const scaleY = dimensions.height / rect.height;
 
-        // Unproject to world coordinates
-        const worldPos = unproject(x, y);
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
 
-        // Convert world coordinates to row/col
-        // Board is centered at (0,0) in world space
-        // Cell (r, c) center is at:
-        //   x = (c - cols/2 + 0.5) * BASE_CELL_SIZE
-        //   y = (r - rows/2 + 0.5) * BASE_CELL_SIZE
-        // Solving for c and r:
-        const c = Math.floor(worldPos.x / BASE_CELL_SIZE + cols / 2);
-        const r = Math.floor(worldPos.y / BASE_CELL_SIZE + rows / 2);
-
-        // Validate bounds
-        if (r >= 0 && r < rows && c >= 0 && c < cols) {
-            onCellClick(r, c);
+        // Hit test against precomputed screen cells
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const cellRect = screenCellsRef.current[r]?.[c];
+                if (cellRect) {
+                    if (x >= cellRect.x1 && x <= cellRect.x2 && y >= cellRect.y1 && y <= cellRect.y2) {
+                        onCellClick(r, c);
+                        return;
+                    }
+                }
+            }
         }
     };
 
@@ -491,13 +497,9 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 <canvas
                     ref={canvasRef}
                     onClick={handleCanvasClick}
-                    width={typeof window !== 'undefined' ? window.innerWidth * window.devicePixelRatio : 800}
-                    height={typeof window !== 'undefined' ? window.innerHeight * window.devicePixelRatio : 600}
                     style={{
                         width: "100vw",
                         height: "100vh",
-                        maxWidth: "100vw",
-                        maxHeight: "100vh",
                         touchAction: "none",
                         display: 'block',
                     }}
