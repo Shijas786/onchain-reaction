@@ -184,15 +184,14 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             args: [arenaAddress, BigInt(0)],
             chainId: selectedChain,
           });
-
+          console.log('[CreateMatchButton] Reset hash:', resetHash);
+          // Wait for reset to confirm
           if (publicClient) {
             await publicClient.waitForTransactionReceipt({ hash: resetHash });
-            // Wait a bit for state to update
-            await new Promise(resolve => setTimeout(resolve, 500));
-            await refetchAllowance();
           }
-        } catch (resetErr: any) {
-          console.warn('[CreateMatchButton] Allowance reset failed (may continue anyway):', resetErr);
+          console.log('[CreateMatchButton] Reset confirmed');
+        } catch (resetErr) {
+          console.warn('[CreateMatchButton] Allowance reset failed or not needed:', resetErr);
         }
       }
 

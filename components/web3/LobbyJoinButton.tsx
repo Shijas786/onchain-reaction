@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain, usePublicClient } from "wagmi";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
 import ERC20Abi from "@/abi/ERC20.json";
 import { USDC_ADDRESSES, parseUSDC } from "@/lib/contracts";
@@ -27,6 +27,7 @@ export function LobbyJoinButton({
 }: LobbyJoinButtonProps) {
   const { address, chainId: connectedChainId } = useAccount();
   const { switchChainAsync } = useSwitchChain();
+  const publicClient = usePublicClient();
   const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
   const { joinLobby, confirmDeposit } = useLobby(lobbyId || null);
   const [step, setStep] = useState<'check' | 'approve' | 'join' | 'done'>('check');
@@ -134,10 +135,12 @@ export function LobbyJoinButton({
               args: [arenaAddress, BigInt(0)],
               chainId,
             });
+            console.log('[LobbyJoinButton] Reset hash:', resetHash);
             // Wait for reset to confirm
-            // Note: In a real app we might want to wait for receipt, but here we'll just fire it
-            // and hope the next tx gets sequenced after. 
-            // Better: wait for it.
+            if (publicClient) {
+              await publicClient.waitForTransactionReceipt({ hash: resetHash });
+            }
+            console.log('[LobbyJoinButton] Reset confirmed');
           }
         } catch (resetErr) {
           console.warn('[LobbyJoinButton] Allowance reset failed or not needed:', resetErr);

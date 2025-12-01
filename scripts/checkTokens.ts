@@ -25,55 +25,29 @@ async function main() {
     console.log("USDC:", usdcAddress);
     console.log("User:", userAddress);
 
-    const userCode = await publicClient.getBytecode({ address: userAddress });
-    console.log("User Code Length:", userCode ? userCode.length : 0);
-
-
     try {
-        const isAllowed = await publicClient.readContract({
-            address: arenaAddress,
-            abi: ChainOrbArenaAbi,
-            functionName: "allowedTokens",
-            args: [usdcAddress],
-        });
-        console.log(`Is USDC allowed? ${isAllowed}`);
-
-        const feeRecipient = await publicClient.readContract({
-            address: arenaAddress,
-            abi: ChainOrbArenaAbi,
-            functionName: "feeRecipient",
-        });
-        console.log("Fee Recipient:", feeRecipient);
-
-        const feeBps = await publicClient.readContract({
-            address: arenaAddress,
-            abi: ChainOrbArenaAbi,
-            functionName: "feeBps",
-        });
-        console.log("Fee BPS:", feeBps);
+        // Simulate createMatch
+        console.log("Simulating createMatch...");
+        const entryFee = 1000000n; // 1 USDC
+        const maxPlayers = 2n;
 
         try {
-            const balance = await publicClient.readContract({
-                address: usdcAddress,
-                abi: ERC20Abi,
-                functionName: "balanceOf",
-                args: [userAddress],
+            const { result } = await publicClient.simulateContract({
+                address: arenaAddress,
+                abi: ChainOrbArenaAbi,
+                functionName: "createMatch",
+                args: [usdcAddress, entryFee, maxPlayers],
+                account: userAddress,
             });
-            console.log(`User Balance: ${balance}`);
-        } catch (e) {
-            console.error("Error checking balance:", e);
-        }
-
-        try {
-            const allowance = await publicClient.readContract({
-                address: usdcAddress,
-                abi: ERC20Abi,
-                functionName: "allowance",
-                args: [userAddress, arenaAddress],
-            });
-            console.log(`User Allowance: ${allowance}`);
-        } catch (e) {
-            console.error("Error checking allowance:", e);
+            console.log("Simulation Success! Result:", result);
+        } catch (simError: any) {
+            console.error("Simulation Failed:", simError.message || simError);
+            if (simError.cause) {
+                console.error("Cause:", simError.cause);
+            }
+            if (simError.data) {
+                console.error("Data:", simError.data);
+            }
         }
 
     } catch (error) {
