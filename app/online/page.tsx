@@ -39,9 +39,8 @@ export default function OnlineMenu() {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-4xl font-black text-slate-800 mb-2">
-            Online Arena
+            Online Multiplayer
           </h1>
-          <p className="text-slate-500">Play for USDC prizes</p>
         </div>
 
         {/* Wallet Connection */}
@@ -69,8 +68,8 @@ export default function OnlineMenu() {
             <button
               onClick={() => setActiveTab("join")}
               className={`flex-1 px-6 py-4 font-bold text-sm transition-all ${activeTab === "join"
-                  ? "bg-white text-blue-600 border-b-2 border-blue-500"
-                  : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                ? "bg-white text-blue-600 border-b-2 border-blue-500"
+                : "bg-slate-50 text-slate-500 hover:bg-slate-100"
                 }`}
             >
               Join Match
@@ -78,8 +77,8 @@ export default function OnlineMenu() {
             <button
               onClick={() => setActiveTab("create")}
               className={`flex-1 px-6 py-4 font-bold text-sm transition-all ${activeTab === "create"
-                  ? "bg-white text-purple-600 border-b-2 border-purple-500"
-                  : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                ? "bg-white text-purple-600 border-b-2 border-purple-500"
+                : "bg-slate-50 text-slate-500 hover:bg-slate-100"
                 }`}
             >
               Create Match
@@ -172,8 +171,14 @@ export default function OnlineMenu() {
 
         {/* Info */}
         <div className="text-center text-xs text-slate-400 space-y-1">
-          <p>Powered by Base & Arbitrum</p>
-          <p>Entry fees in USDC • Winner takes all</p>
+          <a
+            href="https://x.com/cryptowolf07"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-blue-500 transition-colors font-bold"
+          >
+            Built by @cryptowolf07
+          </a>
         </div>
       </div>
     </main>
