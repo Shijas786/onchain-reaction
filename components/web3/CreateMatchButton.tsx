@@ -485,11 +485,25 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
               <button
                 key={token}
                 onClick={() => setSelectedToken(token)}
-                className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all ${selectedToken === token
+                className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${selectedToken === token
                   ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
               >
+                {token === 'USDC' && (
+                  <img
+                    src="https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png"
+                    alt="USDC"
+                    className="w-5 h-5 rounded-full"
+                  />
+                )}
+                {token === 'JESSE' && (
+                  <img
+                    src="https://pbs.twimg.com/profile_images/1858428864826900480/wF139dAu_400x400.jpg"
+                    alt="JESSE"
+                    className="w-5 h-5 rounded-full"
+                  />
+                )}
                 ${token}
               </button>
             ))}
