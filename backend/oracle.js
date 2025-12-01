@@ -1,15 +1,16 @@
 import "dotenv/config";
 import { createWalletClient, createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { base } from "viem/chains";
+import { base, arbitrum } from "viem/chains";
 import { onchainReactionAbi } from "./abi.js";
 
 // === CONFIG ===
 
 // PUT YOUR REAL CONTRACT ADDRESS HERE
-const CONTRACT_ADDRESS = "0x7B04eb09b6748097067c7C9d97C545ADDFD7C97E";
+// Arbitrum Address
+const CONTRACT_ADDRESS = "0x859Bf3A3DD44D7607A7121ab1807F6BF90d7E86c";
 
-const RPC_URL = "https://mainnet.base.org";
+const RPC_URL = "https://arb-mainnet.g.alchemy.com/v2/eTjwZLPVQJs7qTv3Inh338N4Uss_z7OT";
 
 // === ORACLE KEY ===
 let oraclePk = process.env.ORACLE_PRIVATE_KEY;
@@ -23,12 +24,12 @@ const account = privateKeyToAccount(oraclePk);
 
 // === CLIENTS ===
 const provider = createPublicClient({
-    chain: base,
+    chain: arbitrum,
     transport: http(RPC_URL),
 });
 
 const walletClient = createWalletClient({
-    chain: base,
+    chain: arbitrum,
     transport: http(RPC_URL),
     account,
 });
