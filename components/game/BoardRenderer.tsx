@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useMemo, useCallback } from "react"
 import { Board, Cell, PlayerColor } from "@/types/game";
 import { getMaxCapacity } from "@/lib/gameLogic";
 import { soundManager } from "@/lib/sound";
+import { ZoomPanPinch } from "@/components/ui/ZoomPanPinch";
 
 interface BoardRendererProps {
     board: Board;
@@ -473,18 +474,48 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         }
     };
 
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 800);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     return (
         <div className="w-screen h-screen overflow-hidden flex justify-center items-center bg-transparent">
-            <canvas
-                ref={canvasRef}
-                onClick={handleCanvasClick}
-                className="cursor-pointer block"
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'block',
-                }}
-            />
+            {isMobile ? (
+                <canvas
+                    ref={canvasRef}
+                    onClick={handleCanvasClick}
+                    width={typeof window !== 'undefined' ? window.innerWidth * window.devicePixelRatio : 800}
+                    height={typeof window !== 'undefined' ? window.innerHeight * window.devicePixelRatio : 600}
+                    style={{
+                        width: "100vw",
+                        height: "100vh",
+                        maxWidth: "100vw",
+                        maxHeight: "100vh",
+                        touchAction: "none",
+                        display: 'block',
+                    }}
+                />
+            ) : (
+                <ZoomPanPinch className="w-full h-full flex justify-center items-center">
+                    <canvas
+                        ref={canvasRef}
+                        onClick={handleCanvasClick}
+                        className="cursor-pointer block"
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'block',
+                        }}
+                    />
+                </ZoomPanPinch>
+            )}
         </div>
     );
 };
