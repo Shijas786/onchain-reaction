@@ -84,22 +84,44 @@ function OnlineGameContent() {
     return mapped;
   }, [players]);
 
-  // Check for winner
+  const [hasTriggeredOracle, setHasTriggeredOracle] = useState(false);
+
+  // Check for winner and trigger oracle
   useEffect(() => {
     if (lobby?.status === "finished" && lobby.winnerAddress) {
       setShowWinModal(true);
+
+      // Trigger Oracle if not already done
+      if (!hasTriggeredOracle) {
+        setHasTriggeredOracle(true);
+        const oracleUrl = process.env.NEXT_PUBLIC_ORACLE_API_URL;
+        if (oracleUrl) {
+          console.log("Triggering Oracle at:", oracleUrl);
+          fetch(oracleUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: lobby.matchId,
+              winner: lobby.winnerAddress
+            })
+          })
+            .then(res => res.json())
+            .then(data => console.log("Oracle response:", data))
+            .catch(err => console.error("Oracle trigger failed:", err));
+        }
+      }
     }
-  }, [lobby?.status, lobby?.winnerAddress]);
+  }, [lobby?.status, lobby?.winnerAddress, hasTriggeredOracle, lobby?.matchId]);
 
   // Handle cell click
   const handleCellClick = async (row: number, col: number) => {
     console.log('[OnlineGame] Cell clicked:', { row, col, isMyTurn, lobbyStatus: lobby?.status, gameStateExists: !!gameState, isAnimating: gameState?.isAnimating });
-    
+
     if (lobby?.status !== "live") {
       console.warn('[OnlineGame] Cannot move: Game not live', lobby?.status);
       return;
     }
-    
+
     if (!isMyTurn) {
       console.warn('[OnlineGame] Cannot move: Not your turn', { isMyTurn, currentTurnPlayer: currentTurnPlayer?.name });
       return;
@@ -185,9 +207,8 @@ function OnlineGameContent() {
             Exit
           </Button>
           <div className="flex items-center gap-2">
-            <span className={`px-2 py-1 rounded text-xs font-bold ${
-              chainId === 8453 ? "bg-blue-500/20 text-blue-300" : "bg-orange-500/20 text-orange-300"
-            }`}>
+            <span className={`px-2 py-1 rounded text-xs font-bold ${chainId === 8453 ? "bg-blue-500/20 text-blue-300" : "bg-orange-500/20 text-orange-300"
+              }`}>
               {getChainName(chainId)}
             </span>
             <span className="text-slate-400 text-sm font-mono">#{lobbyId}</span>
@@ -209,38 +230,36 @@ function OnlineGameContent() {
           </div>
           <div className="flex items-center justify-center gap-2 py-2 flex-wrap max-w-full overflow-x-auto">
             {gamePlayers.length > 0 ? gamePlayers.map((player, index) => (
-            <div
-              key={player.id}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
-                currentTurnPlayer?.identity?.toHexString?.() === player.id
-                  ? "bg-white/20 scale-105 shadow-lg"
-                  : "bg-white/5 opacity-60"
-              } ${!player.isAlive ? "opacity-30 grayscale" : ""}`}
-            >
               <div
-                className={`w-4 h-4 rounded-full shadow-inner ${
-                  player.color === "red" ? "bg-red-500" :
-                  player.color === "blue" ? "bg-blue-500" :
-                  player.color === "green" ? "bg-green-500" :
-                  player.color === "yellow" ? "bg-yellow-500" :
-                  player.color === "purple" ? "bg-purple-500" :
-                  player.color === "orange" ? "bg-orange-500" :
-                  player.color === "pink" ? "bg-pink-500" :
-                  "bg-cyan-500"
-                }`}
-              />
-              <span className="text-white text-xs font-medium truncate max-w-[50px]">
-                {player.name}
-              </span>
-              {currentTurnPlayer?.identity?.toHexString?.() === player.id && (
-                <span className="text-[10px] bg-white/30 px-1.5 py-0.5 rounded text-white">
-                  TURN
+                key={player.id}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${currentTurnPlayer?.identity?.toHexString?.() === player.id
+                    ? "bg-white/20 scale-105 shadow-lg"
+                    : "bg-white/5 opacity-60"
+                  } ${!player.isAlive ? "opacity-30 grayscale" : ""}`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full shadow-inner ${player.color === "red" ? "bg-red-500" :
+                      player.color === "blue" ? "bg-blue-500" :
+                        player.color === "green" ? "bg-green-500" :
+                          player.color === "yellow" ? "bg-yellow-500" :
+                            player.color === "purple" ? "bg-purple-500" :
+                              player.color === "orange" ? "bg-orange-500" :
+                                player.color === "pink" ? "bg-pink-500" :
+                                  "bg-cyan-500"
+                    }`}
+                />
+                <span className="text-white text-xs font-medium truncate max-w-[50px]">
+                  {player.name}
                 </span>
-              )}
-            </div>
-          )) : (
-            <div className="text-white text-sm">No players loaded...</div>
-          )}
+                {currentTurnPlayer?.identity?.toHexString?.() === player.id && (
+                  <span className="text-[10px] bg-white/30 px-1.5 py-0.5 rounded text-white">
+                    TURN
+                  </span>
+                )}
+              </div>
+            )) : (
+              <div className="text-white text-sm">No players loaded...</div>
+            )}
           </div>
         </div>
 
@@ -254,7 +273,7 @@ function OnlineGameContent() {
             <span className="text-emerald-400 font-bold">Your turn! Tap a cell to place an orb</span>
           </motion.div>
         )}
-        
+
         {/* Debug info - remove in production */}
         {process.env.NODE_ENV === 'development' && (
           <div className="text-xs text-slate-400 space-y-1 p-2 bg-black/30 rounded">
@@ -277,7 +296,7 @@ function OnlineGameContent() {
           explosionQueue={explosionQueue}
           clearExplosionQueue={() => setExplosionQueue([])}
         />
-        
+
         {/* Overlay when not your turn */}
         {!isMyTurn && lobby.status === "live" && (
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
@@ -310,11 +329,11 @@ function OnlineGameContent() {
                 {isWinner ? "You Won!" : "Game Over"}
               </h2>
               <p className="text-slate-400 mb-4">
-                {isWinner 
+                {isWinner
                   ? `Congratulations! You won the ${prizePool} USDC prize pool!`
                   : `${winner?.name || "Opponent"} won this match.`}
               </p>
-              
+
               {isWinner && (
                 <div className="bg-emerald-500/20 rounded-xl p-4 mb-6 border border-emerald-500/30">
                   <p className="text-emerald-400 text-sm mb-2">Prize awaits claim:</p>
