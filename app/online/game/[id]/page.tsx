@@ -308,7 +308,7 @@ function OnlineGameContent() {
       />
 
       {/* Game Board Container */}
-      <div className="relative w-full h-full flex justify-center items-start pt-[60px] sm:pt-[80px]">
+      <div className="relative w-full h-full flex justify-center items-center">
         <BoardRenderer
           board={visualBoard || gameBoard}
           rows={gameState?.rows || 9}

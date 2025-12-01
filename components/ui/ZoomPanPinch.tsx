@@ -82,17 +82,64 @@ export const ZoomPanPinch: React.FC<ZoomPanPinchProps> = ({
             lastDistRef.current = null;
         };
 
+        // Mouse Events
+        const handleMouseDown = (e: MouseEvent) => {
+            isDraggingRef.current = true;
+            lastTouchRef.current = { x: e.clientX, y: e.clientY };
+            container.style.cursor = "grabbing";
+        };
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDraggingRef.current || !lastTouchRef.current) return;
+            e.preventDefault();
+
+            const dx = e.clientX - lastTouchRef.current.x;
+            const dy = e.clientY - lastTouchRef.current.y;
+
+            setPosition((prev) => ({
+                x: prev.x + dx,
+                y: prev.y + dy,
+            }));
+
+            lastTouchRef.current = { x: e.clientX, y: e.clientY };
+        };
+
+        const handleMouseUp = () => {
+            isDraggingRef.current = false;
+            lastTouchRef.current = null;
+            container.style.cursor = "grab";
+        };
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const zoomFactor = -e.deltaY * 0.001;
+            setScale((prevScale) => {
+                const newScale = Math.min(Math.max(prevScale + zoomFactor, minScale), maxScale);
+                return newScale;
+            });
+        };
+
         // Add non-passive event listeners to prevent scrolling
         container.addEventListener("touchstart", handleTouchStart, { passive: false });
         container.addEventListener("touchmove", handleTouchMove, { passive: false });
         container.addEventListener("touchend", handleTouchEnd);
         container.addEventListener("touchcancel", handleTouchEnd);
 
+        container.addEventListener("mousedown", handleMouseDown);
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+        container.addEventListener("wheel", handleWheel, { passive: false });
+
         return () => {
             container.removeEventListener("touchstart", handleTouchStart);
             container.removeEventListener("touchmove", handleTouchMove);
             container.removeEventListener("touchend", handleTouchEnd);
             container.removeEventListener("touchcancel", handleTouchEnd);
+
+            container.removeEventListener("mousedown", handleMouseDown);
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", handleMouseUp);
+            container.removeEventListener("wheel", handleWheel);
         };
     }, [minScale, maxScale]);
 
