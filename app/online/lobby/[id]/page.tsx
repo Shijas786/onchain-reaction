@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { Button } from "@/components/ui/Button";
 import { DoodleBackground } from "@/components/ui/DoodleBackground";
 import { LobbyJoinButton } from "@/components/web3/LobbyJoinButton";
@@ -223,6 +223,8 @@ function LobbyContent() {
     return () => clearInterval(interval);
   }, [refetchMatch, refetchPlayers]);
 
+  const { writeContractAsync } = useWriteContract();
+
   const handleStartGame = async () => {
     if (!players || players.length < 2) {
       console.error('Need at least 2 players to start');
@@ -241,7 +243,29 @@ function LobbyContent() {
 
     setIsStarting(true);
     try {
-      // Start game in SpacetimeDB
+      // 1. Start match on-chain (if not already live)
+      if (match?.status === 0) { // Pending
+        try {
+          console.log('[LobbyPage] Starting match on-chain...');
+          const hash = await writeContractAsync({
+            address: arenaAddress,
+            abi: ChainOrbArenaAbi,
+            functionName: "startMatch",
+            args: [BigInt(matchId)],
+            chainId,
+          });
+          console.log('[LobbyPage] startMatch tx sent:', hash);
+          // We don't strictly wait for confirmation to avoid blocking UI, 
+          // but ideally we should. For now, proceed to SpacetimeDB start.
+        } catch (err) {
+          console.error('[LobbyPage] Failed to start match on-chain:', err);
+          setIsStarting(false);
+          alert('Failed to start match on-chain. Please try again.');
+          return;
+        }
+      }
+
+      // 2. Start game in SpacetimeDB
       if (isSpacetimeConnected && startSpacetimeGame) {
         console.log('[LobbyPage] Starting game in SpacetimeDB...', {
           players: spacetimePlayers?.map(p => ({ name: p.name, hasDeposited: p.hasDeposited })) || [],
@@ -256,7 +280,6 @@ function LobbyContent() {
         }
         console.log('[LobbyPage] Game start command sent. Waiting for status to update...');
         // Don't navigate manually - let the useEffect handle redirect when status becomes "live"
-        // The redirect will happen automatically via the useEffect that watches spacetimeLobby?.status
       } else {
         console.error('[LobbyPage] Cannot start game: not connected or startGame function missing');
         setIsStarting(false);
@@ -266,6 +289,22 @@ function LobbyContent() {
       console.error('Failed to start game:', err);
       setIsStarting(false);
       alert('Failed to start game. Please try again.');
+    }
+  };
+
+  // Recovery: Force start on-chain if stuck
+  const handleForceStartOnChain = async () => {
+    try {
+      const hash = await writeContractAsync({
+        address: arenaAddress,
+        abi: ChainOrbArenaAbi,
+        functionName: "startMatch",
+        args: [BigInt(matchId)],
+        chainId,
+      });
+      alert(`Transaction sent: ${hash}`);
+    } catch (err: any) {
+      alert(`Error: ${err?.message || err}`);
     }
   };
 
@@ -425,15 +464,27 @@ function LobbyContent() {
             </div>
           ) : hasJoined || isHost || isSpacetimeHost ? (
             (isHost || isSpacetimeHost) && players.length >= 2 ? (
-              <Button
-                variant="primary"
-                size="lg"
-                className="w-full max-w-xs shadow-lg shadow-blue-500/20"
-                onClick={handleStartGame}
-                disabled={isStarting || !isSpacetimeConnected}
-              >
-                {isStarting ? "Starting..." : "Start Game"}
-              </Button>
+              <div className="flex flex-col gap-2 w-full max-w-xs">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full shadow-lg shadow-blue-500/20"
+                  onClick={handleStartGame}
+                  disabled={isStarting || !isSpacetimeConnected}
+                >
+                  {isStarting ? "Starting..." : "Start Game"}
+                </Button>
+
+                {/* Recovery Button for Host */}
+                {match?.status === 0 && (spacetimeLobby?.status === "live" || spacetimeLobby?.status === "finished") && (
+                  <button
+                    onClick={handleForceStartOnChain}
+                    className="text-xs text-amber-500 hover:text-amber-400 underline mt-2"
+                  >
+                    Force Start On-Chain (Fix Stuck Game)
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="text-center p-4 bg-white/50 backdrop-blur-md rounded-2xl border border-white/50">
                 <div className="flex items-center justify-center gap-3 text-slate-600 font-bold">
