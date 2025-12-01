@@ -117,7 +117,7 @@ async function finalizeMatchOnChain(
       return { success: false, error: "Arena contract not deployed on this chain" };
     }
 
-    const matchId = BigInt(Number(lobby.matchId));
+    const matchId = BigInt(lobby.matchId);
     const winnerAddress = lobby.winnerAddress as `0x${string}`;
 
     // Check if already finalized
@@ -257,7 +257,7 @@ async function main() {
         .onError((err) => {
           console.error("Subscription error:", err);
         })
-        .subscribe([`SELECT * FROM lobby WHERE status = 'finished'`]);
+        .subscribe([`SELECT * FROM lobby`]);
     } catch (subErr) {
       console.error("Failed to create subscription:", subErr);
     }
@@ -303,7 +303,7 @@ async function processFinishedLobby(lobby: LobbyType, connection: DbConnection):
   console.log(`\n🔄 Processing finished lobby: ${lobby.id}`);
 
   // Check if already settled (in case we restarted)
-  const alreadyFinalized = await isMatchFinalized(lobby.chainId, BigInt(Number(lobby.matchId)));
+  const alreadyFinalized = await isMatchFinalized(lobby.chainId, BigInt(lobby.matchId));
 
   if (alreadyFinalized) {
     console.log(`   ⏭️  Match ${lobby.matchId} already finalized on-chain, skipping`);
