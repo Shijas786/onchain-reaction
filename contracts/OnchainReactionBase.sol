@@ -65,7 +65,7 @@ contract OnchainReaction is Ownable {
 
         // ADDING ALLOWED BASE TOKENS HERE
         allowedTokens[
-            0x833589FcD6EDB6E08F4C7c32D4f61a2E6a6211bE
+            0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
         ] = true; // Base USDC ✔
         allowedTokens[
             0x50F88fe97f72CD3E75b9Eb4f747F59BcEBA80d59
@@ -207,6 +207,10 @@ contract OnchainReaction is Ownable {
         feeBps = bps;
     }
 
+    function setAllowedToken(address token, bool allowed) external onlyOwner {
+        allowedTokens[token] = allowed;
+    }
+
     function withdrawFees(address token) external {
         require(msg.sender == feeRecipient, "Not recipient");
 
@@ -216,5 +220,6 @@ contract OnchainReaction is Ownable {
         IERC20(token).safeTransfer(feeRecipient, amt);
     }
 }
+
 
 

@@ -192,6 +192,10 @@ contract OnchainReaction is Ownable {
         feeBps = bps;
     }
 
+    function setAllowedToken(address token, bool allowed) external onlyOwner {
+        allowedTokens[token] = allowed;
+    }
+
     function withdrawFees() external {
         require(msg.sender == feeRecipient, "Not recipient");
 
@@ -203,5 +207,6 @@ contract OnchainReaction is Ownable {
         ).safeTransfer(feeRecipient, amt);
     }
 }
+
 
 
