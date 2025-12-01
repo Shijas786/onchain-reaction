@@ -250,50 +250,53 @@ function OnlineGameContent() {
 
   return (
     <>
-      {/* Top Bar */}
-      <div className="w-full max-w-lg flex justify-between items-center mb-2 sm:mb-6 px-2 sm:px-4">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleExit}
-          className="bg-white text-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold"
-        >
-          Exit
-        </Button>
+      {/* Floating UI Container */}
+      <div className="absolute top-0 left-0 w-full z-10 flex flex-col items-center pointer-events-none pt-[env(safe-area-inset-top)]">
+        {/* Top Bar */}
+        <div className="w-full max-w-lg flex justify-between items-center p-2 sm:p-4 pointer-events-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExit}
+            className="bg-white text-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold"
+          >
+            Exit
+          </Button>
 
-        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-          <span className="text-black text-sm font-bold uppercase tracking-wider">Prize:</span>
-          <span className="text-black font-bold text-lg">${prizePool}</span>
+          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <span className="text-black text-sm font-bold uppercase tracking-wider">Prize:</span>
+            <span className="text-black font-bold text-lg">${prizePool}</span>
+          </div>
         </div>
-      </div>
 
-      {/* Player List (Turn Indicator Style) */}
-      <div className="w-full max-w-lg mb-4 px-2 sm:px-4">
-        <div className="flex items-center justify-center gap-2 py-2 flex-wrap max-w-full overflow-x-auto">
-          {gamePlayers.map((player) => (
-            <div
-              key={player.id}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all ${currentTurnPlayer?.identity?.toHexString?.() === player.id
-                ? "bg-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] scale-105"
-                : "bg-white/50 border-transparent opacity-60"
-                } ${!player.isAlive ? "opacity-30 grayscale" : ""}`}
-            >
+        {/* Player List (Turn Indicator Style) */}
+        <div className="w-full max-w-lg px-2 sm:px-4 pointer-events-auto">
+          <div className="flex items-center justify-center gap-2 py-2 flex-wrap max-w-full overflow-x-auto no-scrollbar">
+            {gamePlayers.map((player) => (
               <div
-                className={`w-4 h-4 rounded-full border border-black ${player.color === "red" ? "bg-[#FF9AA2]" :
-                  player.color === "blue" ? "bg-[#C7CEEA]" :
-                    player.color === "green" ? "bg-[#B5EAD7]" :
-                      player.color === "yellow" ? "bg-[#FFF7B1]" :
-                        player.color === "purple" ? "bg-[#E0BBE4]" :
-                          player.color === "orange" ? "bg-[#FFDAC1]" :
-                            player.color === "pink" ? "bg-[#F8BBD0]" :
-                              "bg-[#B2EBF2]"
-                  }`}
-              />
-              <span className="text-black text-xs font-bold truncate max-w-[80px]">
-                {player.name}
-              </span>
-            </div>
-          ))}
+                key={player.id}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all ${currentTurnPlayer?.identity?.toHexString?.() === player.id
+                  ? "bg-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] scale-105"
+                  : "bg-white/50 border-transparent opacity-60"
+                  } ${!player.isAlive ? "opacity-30 grayscale" : ""}`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full border border-black ${player.color === "red" ? "bg-[#FF9AA2]" :
+                    player.color === "blue" ? "bg-[#C7CEEA]" :
+                      player.color === "green" ? "bg-[#B5EAD7]" :
+                        player.color === "yellow" ? "bg-[#FFF7B1]" :
+                          player.color === "purple" ? "bg-[#E0BBE4]" :
+                            player.color === "orange" ? "bg-[#FFDAC1]" :
+                              player.color === "pink" ? "bg-[#F8BBD0]" :
+                                "bg-[#B2EBF2]"
+                    }`}
+                />
+                <span className="text-black text-xs font-bold truncate max-w-[80px]">
+                  {player.name}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -304,8 +307,8 @@ function OnlineGameContent() {
         onClaimTimeout={claimTimeout}
       />
 
-      {/* Game Board */}
-      <div className="relative p-0 bg-transparent rounded-none shadow-none border-none">
+      {/* Game Board Container */}
+      <div className="relative w-full h-full flex justify-center items-start pt-[60px] sm:pt-[80px]">
         <BoardRenderer
           board={visualBoard || gameBoard}
           rows={gameState?.rows || 9}
@@ -379,7 +382,7 @@ function OnlineGameContent() {
       </AnimatePresence>
 
       {/* Debug Overlay */}
-      <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded-xl text-xs font-mono z-50 pointer-events-none">
+      <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded-xl text-xs font-mono z-50 pointer-events-none hidden sm:block">
         <p>Lobby Status: {lobby?.status}</p>
         <p>Game State: {gameState ? "Loaded" : "Missing"}</p>
         <p>Turn Deadline: {gameState?.turnDeadline?.toString() || "undefined"}</p>
@@ -393,10 +396,10 @@ function OnlineGameContent() {
 
 export default function OnlineGamePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-[#f0f0f0] p-4 overflow-hidden">
+    <main className="relative w-full h-[100vh] bg-[#f0f0f0] overflow-hidden">
       <Suspense
         fallback={
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center justify-center h-full gap-4">
             <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin" />
             <p className="text-black font-bold">Loading...</p>
           </div>

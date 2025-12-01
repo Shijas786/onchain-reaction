@@ -519,7 +519,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     };
 
     return (
-        <ZoomPanPinch className="w-full h-full flex justify-center items-center">
+        <ZoomPanPinch className="w-full h-full flex justify-center items-start">
             <canvas
                 ref={canvasRef}
                 width={canvasWidth}
@@ -528,15 +528,16 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                 className="cursor-pointer"
                 style={{
                     width: '100%',
-                    maxWidth: 'min(100vw - 1rem, 1800px)', // Larger on desktop
-                    maxHeight: 'calc(100vh - 100px)', // Use more viewport height
+                    maxWidth: 'min(100vw, 1800px)',
+                    maxHeight: '100vh', // Full viewport height
                     height: 'auto',
                     aspectRatio: `${canvasWidth} / ${canvasHeight}`,
                     background: 'transparent',
-                    borderRadius: '0px', // Remove border radius
-                    border: 'none', // Remove outer border
-                    boxShadow: 'none', // Remove shadow
+                    borderRadius: '0px',
+                    border: 'none',
+                    boxShadow: 'none',
                     objectFit: 'contain',
+                    display: 'block', // Remove inline-block spacing
                 }}
             />
         </ZoomPanPinch>

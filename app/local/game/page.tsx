@@ -37,39 +37,42 @@ function LocalGameContent() {
 
     return (
         <>
-            {/* Top Bar */}
-            <div className="w-full max-w-lg flex justify-between items-center mb-2 sm:mb-6 px-2 sm:px-4">
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => router.push('/')}
-                    className="bg-white text-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold"
-                >
-                    Exit
-                </Button>
+            {/* Floating UI Container */}
+            <div className="absolute top-0 left-0 w-full z-10 flex flex-col items-center pointer-events-none pt-[env(safe-area-inset-top)]">
+                {/* Top Bar */}
+                <div className="w-full max-w-lg flex justify-between items-center p-2 sm:p-4 pointer-events-auto">
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => router.push('/')}
+                        className="bg-white text-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold"
+                    >
+                        Exit
+                    </Button>
 
-                <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    <span className="text-black text-sm font-bold uppercase tracking-wider">Turn:</span>
-                    <div className="flex items-center gap-2">
-                        <div
-                            className="w-4 h-4 rounded-full border border-black"
-                            style={{
-                                backgroundColor:
-                                    currentPlayer?.color === 'red' ? '#FF9AA2' :
-                                        currentPlayer?.color === 'blue' ? '#C7CEEA' :
-                                            currentPlayer?.color === 'green' ? '#B5EAD7' :
-                                                currentPlayer?.color === 'yellow' ? '#FFF7B1' :
-                                                    currentPlayer?.color === 'purple' ? '#E0BBE4' :
-                                                        '#FFDAC1'
-                            }}
-                        />
-                        <span className="text-black font-bold">{currentPlayer?.name}</span>
+                    <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <span className="text-black text-sm font-bold uppercase tracking-wider">Turn:</span>
+                        <div className="flex items-center gap-2">
+                            <div
+                                className="w-4 h-4 rounded-full border border-black"
+                                style={{
+                                    backgroundColor:
+                                        currentPlayer?.color === 'red' ? '#FF9AA2' :
+                                            currentPlayer?.color === 'blue' ? '#C7CEEA' :
+                                                currentPlayer?.color === 'green' ? '#B5EAD7' :
+                                                    currentPlayer?.color === 'yellow' ? '#FFF7B1' :
+                                                        currentPlayer?.color === 'purple' ? '#E0BBE4' :
+                                                            '#FFDAC1'
+                                }}
+                            />
+                            <span className="text-black font-bold">{currentPlayer?.name}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Game Board */}
-            <div className="relative p-0 bg-transparent rounded-none shadow-none border-none">
+            {/* Game Board Container */}
+            <div className="relative w-full h-full flex justify-center items-start pt-[60px] sm:pt-[80px]">
                 <BoardRenderer
                     board={gameState.board}
                     rows={rows}
@@ -132,8 +135,8 @@ function LocalGameContent() {
 
 export default function LocalGame() {
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4 overflow-hidden">
-            <Suspense fallback={<div className="text-green-500 font-mono">Loading game...</div>}>
+        <main className="relative w-full h-[100vh] bg-transparent overflow-hidden">
+            <Suspense fallback={<div className="flex flex-col items-center justify-center h-full text-green-500 font-mono">Loading game...</div>}>
                 <LocalGameContent />
             </Suspense>
         </main>
