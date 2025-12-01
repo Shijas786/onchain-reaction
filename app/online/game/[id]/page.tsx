@@ -27,6 +27,7 @@ function TimerDisplay({
   const [timeLeft, setTimeLeft] = useState<number>(30);
 
   useEffect(() => {
+    console.log("[TimerDisplay] turnDeadline:", turnDeadline, "isLive:", isLive);
     if (!turnDeadline) return;
 
     const interval = setInterval(() => {
@@ -38,9 +39,17 @@ function TimerDisplay({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [turnDeadline]);
+  }, [turnDeadline, isLive]);
 
-  if (!isLive || !turnDeadline) return null;
+  if (!isLive) return null;
+
+  if (!turnDeadline) {
+    return (
+      <div className="fixed top-20 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full border-2 border-black bg-yellow-100 text-yellow-800 font-bold shadow-md z-50">
+        ⚠️ Timer Sync Error (Check Console)
+      </div>
+    );
+  }
 
   return (
     <>
