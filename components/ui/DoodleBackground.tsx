@@ -6,12 +6,13 @@ interface Doodle {
     x: number;
     y: number;
     size: number;
-    type: 'ethereum' | 'base' | 'farcaster' | 'arbitrum';
+    type: 'cloud' | 'bubble' | 'arrow' | 'star' | 'circle';
     color: string;
     rotation: number;
     rotationSpeed: number;
     vx: number;
     vy: number;
+    pulseOffset: number;
 }
 
 const COLORS = [
@@ -21,6 +22,7 @@ const COLORS = [
     "#FFF7B1", // Yellow
     "#E0BBE4", // Purple
     "#FFDAC1", // Orange
+    "#B2EBF2", // Cyan
 ];
 
 export const DoodleBackground = () => {
@@ -48,26 +50,32 @@ export const DoodleBackground = () => {
 
         // Initialize Doodles
         const doodles: Doodle[] = [];
-        const doodleCount = 20; // Fewer items since they are logos
+        const doodleCount = 25;
 
         for (let i = 0; i < doodleCount; i++) {
             doodles.push({
                 x: Math.random() * width,
                 y: Math.random() * height,
-                size: 30 + Math.random() * 30,
-                type: ['ethereum', 'base', 'farcaster', 'arbitrum'][Math.floor(Math.random() * 4)] as any,
+                size: 20 + Math.random() * 40,
+                type: ['cloud', 'bubble', 'arrow', 'star', 'circle'][Math.floor(Math.random() * 5)] as any,
                 color: COLORS[Math.floor(Math.random() * COLORS.length)],
                 rotation: Math.random() * Math.PI * 2,
-                rotationSpeed: (Math.random() - 0.5) * 0.01,
-                vx: (Math.random() - 0.5) * 0.3,
-                vy: (Math.random() - 0.5) * 0.3,
+                rotationSpeed: (Math.random() - 0.5) * 0.02,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5,
+                pulseOffset: Math.random() * Math.PI * 2,
             });
         }
 
-        const drawDoodle = (ctx: CanvasRenderingContext2D, d: Doodle) => {
+        const drawDoodle = (ctx: CanvasRenderingContext2D, d: Doodle, time: number) => {
             ctx.save();
             ctx.translate(d.x, d.y);
             ctx.rotate(d.rotation);
+
+            // Pulse effect
+            const scale = 1 + Math.sin(time * 2 + d.pulseOffset) * 0.1;
+            ctx.scale(scale, scale);
+
             ctx.strokeStyle = d.color;
             ctx.lineWidth = 3;
             ctx.lineCap = "round";
@@ -76,69 +84,64 @@ export const DoodleBackground = () => {
             const s = d.size;
 
             switch (d.type) {
-                case 'ethereum':
-                    // Diamond shape
+                case 'cloud':
+                    // Simple cloud shape (3 overlapping circles)
                     ctx.beginPath();
-                    ctx.moveTo(0, -s / 2);
-                    ctx.lineTo(s / 3, 0);
-                    ctx.lineTo(0, s / 2);
-                    ctx.lineTo(-s / 3, 0);
-                    ctx.closePath();
-                    // Inner line
-                    ctx.moveTo(0, -s / 2);
-                    ctx.lineTo(0, s / 2);
+                    ctx.arc(-s / 2, 0, s / 3, 0, Math.PI * 2);
+                    ctx.arc(0, -s / 3, s / 2.5, 0, Math.PI * 2);
+                    ctx.arc(s / 2, 0, s / 3, 0, Math.PI * 2);
                     ctx.stroke();
+                    // Fill slightly for "forming" look
+                    ctx.fillStyle = `${d.color}20`; // Low opacity fill
+                    ctx.fill();
                     break;
-                case 'base':
-                    // Circle with ring
+
+                case 'bubble':
+                    // Circle with reflection
                     ctx.beginPath();
                     ctx.arc(0, 0, s / 2, 0, Math.PI * 2);
                     ctx.stroke();
+                    // Reflection
+                    ctx.beginPath();
+                    ctx.arc(-s / 6, -s / 6, s / 8, 0, Math.PI * 2);
+                    ctx.fillStyle = d.color;
+                    ctx.fill();
+                    break;
+
+                case 'arrow':
+                    // Arrow shape
+                    ctx.beginPath();
+                    ctx.moveTo(-s / 2, 0);
+                    ctx.lineTo(s / 2, 0);
+                    ctx.lineTo(s / 4, -s / 4);
+                    ctx.moveTo(s / 2, 0);
+                    ctx.lineTo(s / 4, s / 4);
+                    ctx.stroke();
+                    break;
+
+                case 'star':
+                    // 4-point star / sparkle
+                    ctx.beginPath();
+                    ctx.moveTo(0, -s / 2);
+                    ctx.quadraticCurveTo(0, 0, s / 2, 0);
+                    ctx.quadraticCurveTo(0, 0, 0, s / 2);
+                    ctx.quadraticCurveTo(0, 0, -s / 2, 0);
+                    ctx.quadraticCurveTo(0, 0, 0, -s / 2);
+                    ctx.stroke();
+                    break;
+
+                case 'circle':
+                    // Small decorative circles/dots
                     ctx.beginPath();
                     ctx.arc(0, 0, s / 4, 0, Math.PI * 2);
-                    ctx.stroke();
-                    break;
-                case 'farcaster':
-                    // Rounded square with arch
-                    ctx.beginPath();
-                    // Rounded rect
-                    const r = s / 6;
-                    ctx.moveTo(-s / 2 + r, -s / 2);
-                    ctx.lineTo(s / 2 - r, -s / 2);
-                    ctx.quadraticCurveTo(s / 2, -s / 2, s / 2, -s / 2 + r);
-                    ctx.lineTo(s / 2, s / 2 - r);
-                    ctx.quadraticCurveTo(s / 2, s / 2, s / 2 - r, s / 2);
-                    ctx.lineTo(-s / 2 + r, s / 2);
-                    ctx.quadraticCurveTo(-s / 2, s / 2, -s / 2, s / 2 - r);
-                    ctx.lineTo(-s / 2, -s / 2 + r);
-                    ctx.quadraticCurveTo(-s / 2, -s / 2, -s / 2 + r, -s / 2);
-                    ctx.stroke();
-                    // Arch
-                    ctx.beginPath();
-                    ctx.arc(0, s / 4, s / 3, Math.PI, 0);
-                    ctx.stroke();
-                    break;
-                case 'arbitrum':
-                    // Shield/Triangle
-                    ctx.beginPath();
-                    ctx.moveTo(0, -s / 2);
-                    ctx.lineTo(s / 2, 0);
-                    ctx.lineTo(0, s / 2);
-                    ctx.lineTo(-s / 2, 0);
-                    ctx.closePath();
-                    // Internal detail
-                    ctx.moveTo(0, -s / 2);
-                    ctx.lineTo(s / 4, 0);
-                    ctx.lineTo(0, s / 4);
-                    ctx.lineTo(-s / 4, 0);
-                    ctx.closePath();
                     ctx.stroke();
                     break;
             }
             ctx.restore();
         };
 
-        const render = () => {
+        const render = (time: number) => {
+            const t = time / 1000;
             ctx.clearRect(0, 0, width, height);
 
             // Optional: Draw faint grid or dots for "notebook" feel
@@ -155,20 +158,21 @@ export const DoodleBackground = () => {
                 d.y += d.vy;
                 d.rotation += d.rotationSpeed;
 
-                // Wrap around
-                if (d.x < -50) d.x = width + 50;
-                if (d.x > width + 50) d.x = -50;
-                if (d.y < -50) d.y = height + 50;
-                if (d.y > height + 50) d.y = -50;
+                // Wrap around with buffer
+                const buffer = 100;
+                if (d.x < -buffer) d.x = width + buffer;
+                if (d.x > width + buffer) d.x = -buffer;
+                if (d.y < -buffer) d.y = height + buffer;
+                if (d.y > height + buffer) d.y = -buffer;
 
                 // Draw
-                drawDoodle(ctx, d);
+                drawDoodle(ctx, d, t);
             });
 
             animationFrameId = requestAnimationFrame(render);
         };
 
-        render();
+        requestAnimationFrame(render);
 
         return () => {
             window.removeEventListener("resize", resize);

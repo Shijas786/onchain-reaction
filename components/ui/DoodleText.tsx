@@ -23,7 +23,7 @@ export const DoodleText = () => {
                         y="50%"
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="text-5xl font-black fill-transparent stroke-slate-300"
+                        className="text-4xl font-black fill-transparent stroke-slate-300"
                         strokeWidth="4"
                         style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", sans-serif' }}
                     >
@@ -36,7 +36,7 @@ export const DoodleText = () => {
                         y="50%"
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="text-5xl font-black fill-transparent stroke-slate-800"
+                        className="text-4xl font-black fill-transparent stroke-slate-800"
                         strokeWidth="2"
                         style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", sans-serif' }}
                         initial={{ strokeDasharray: 1000, strokeDashoffset: 1000 }}
@@ -52,7 +52,7 @@ export const DoodleText = () => {
                         y="50%"
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        className="text-5xl font-black fill-blue-400/20 stroke-none"
+                        className="text-4xl font-black fill-blue-400/20 stroke-none"
                         style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", sans-serif' }}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
