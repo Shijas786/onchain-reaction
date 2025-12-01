@@ -9,7 +9,7 @@
     "lint": "next lint",
     "vercel": "vercel",
     "vercel:prod": "vercel --prod",
-    "oracle": "node backend/oracle.js"
+    "oracle": "tsx scripts/spacetimeOracle.ts"
   },
   "dependencies": {
     "@clockworklabs/spacetimedb-sdk": "^1.3.3",
