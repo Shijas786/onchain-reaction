@@ -223,30 +223,40 @@ async function main() {
       builder.build();
     });
 
+    console.log("Using SpacetimeDB Config:", SPACETIMEDB_CONFIG);
+
     // Subscribe to lobby table and watch for finished games
     console.log("📡 Subscribing to lobby table...");
 
-    const subscription = connection.subscriptionBuilder()
-      .onApplied((ctx) => {
-        console.log("Subscription applied, scanning for finished games...");
+    try {
+      const subscription = connection.subscriptionBuilder()
+        .onApplied((ctx) => {
+          console.log("Subscription applied, scanning for finished games...");
 
-        // Get all finished lobbies that have a winner
-        const allLobbies = Array.from(ctx.db.lobby.iter());
-        const finishedLobbies = allLobbies.filter(
-          (lobby: LobbyRowType) => lobby.status === "finished" && lobby.winnerAddress
-        );
+          // Get all finished lobbies that have a winner
+          try {
+            const allLobbies = Array.from(ctx.db.lobby.iter());
+            const finishedLobbies = allLobbies.filter(
+              (lobby: LobbyRowType) => lobby.status === "finished" && lobby.winnerAddress
+            );
 
-        console.log(`Found ${finishedLobbies.length} finished lobby/lobbies`);
+            console.log(`Found ${finishedLobbies.length} finished lobby/lobbies`);
 
-        // Process each finished lobby
-        finishedLobbies.forEach((lobby) => {
-          processFinishedLobby(lobby as unknown as LobbyType, connection!);
-        });
-      })
-      .onError((err) => {
-        console.error("Subscription error:", err);
-      })
-      .subscribe([`SELECT * FROM lobby WHERE status = 'finished' AND winner_address IS NOT NULL`]);
+            // Process each finished lobby
+            finishedLobbies.forEach((lobby) => {
+              processFinishedLobby(lobby as unknown as LobbyType, connection!);
+            });
+          } catch (err) {
+            console.error("Error processing initial lobbies:", err);
+          }
+        })
+        .onError((err) => {
+          console.error("Subscription error:", err);
+        })
+        .subscribe([`SELECT * FROM lobby WHERE status = 'finished' AND winner_address IS NOT NULL`]);
+    } catch (subErr) {
+      console.error("Failed to create subscription:", subErr);
+    }
 
     // Listen for updates to lobby table
     connection.db.lobby.onUpdate((ctx, oldRow, newRow) => {
