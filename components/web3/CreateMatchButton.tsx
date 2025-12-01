@@ -21,7 +21,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
 
   const [selectedChain, setSelectedChain] = useState<number>(CHAIN_IDS.BASE);
-  const [entryFee, setEntryFee] = useState<string>("5");
+  const [entryFee, setEntryFee] = useState<string>("0.01");
   const [customEntryFee, setCustomEntryFee] = useState<string>("");
   const [useCustomFee, setUseCustomFee] = useState<boolean>(false);
   const [maxPlayers, setMaxPlayers] = useState<number>(4);

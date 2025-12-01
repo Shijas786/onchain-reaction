@@ -59,10 +59,10 @@ export const formatUSDC = (amount: bigint | string | number): string => {
 
 // Default entry fee options in USDC
 export const ENTRY_FEE_OPTIONS = [
+  { label: '$0.01 USDC', value: '0.01' },
   { label: '$1 USDC', value: '1' },
   { label: '$5 USDC', value: '5' },
   { label: '$10 USDC', value: '10' },
-  { label: '$25 USDC', value: '25' },
 ]
 
 // Max players range
