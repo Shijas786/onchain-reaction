@@ -77,6 +77,7 @@ pub struct GameState {
     pub is_animating: bool,
     pub move_count: u32,
     pub last_move_at: Timestamp,
+    pub turn_deadline: Timestamp, // When the current turn expires
 }
 
 /// GameMove - Individual moves for replay/verification
@@ -218,6 +219,7 @@ pub fn create_lobby(
         is_animating: false,
         move_count: 0,
         last_move_at: now,
+        turn_deadline: now, // Will be set correctly on start_game
     });
 
     log::info!("Lobby created: {} by {:?}", lobby_id, ctx.sender);
@@ -338,6 +340,16 @@ pub fn start_game(ctx: &ReducerContext, lobby_id: String) {
         status: "live".to_string(),
         updated_at: ctx.timestamp,
         ..lobby
+    });
+
+    // Set initial turn deadline (30 seconds)
+    // 30 seconds = 30 * 1,000,000 microseconds
+    let deadline = ctx.timestamp.plus(std::time::Duration::from_secs(30));
+    
+    let game_state = ctx.db.game_state().lobby_id().find(&lobby_id).expect("Game state not found");
+    ctx.db.game_state().lobby_id().update(GameState {
+        turn_deadline: deadline,
+        ..game_state
     });
 
     log::info!("Game started in lobby {}", lobby_id);
@@ -520,6 +532,9 @@ pub fn make_move(
         0
     };
 
+    // Set new turn deadline (30 seconds from now)
+    let new_deadline = ctx.timestamp.plus(std::time::Duration::from_secs(30));
+
     ctx.db.game_state().lobby_id().update(GameState {
         board_json: serde_json::to_string(&board).unwrap(),
         rows: game_state.rows,
@@ -527,8 +542,95 @@ pub fn make_move(
         current_player_index: new_player_index,
         move_count: game_state.move_count + 1,
         last_move_at: ctx.timestamp,
+        turn_deadline: new_deadline,
         ..game_state
     });
+}
+
+/// Claim timeout for current player
+#[spacetimedb::reducer]
+pub fn claim_timeout(ctx: &ReducerContext, lobby_id: String) {
+    let lobby = ctx.db.lobby().id().find(&lobby_id)
+        .expect("Lobby not found");
+
+    if lobby.status != "live" {
+        panic!("Game is not live");
+    }
+
+    let game_state = ctx.db.game_state().lobby_id().find(&lobby_id)
+        .expect("Game state not found");
+
+    // Check if deadline passed
+    if ctx.timestamp < game_state.turn_deadline {
+        panic!("Turn has not timed out yet");
+    }
+
+    // Get alive players sorted by join time
+    let mut players: Vec<_> = ctx.db.lobby_player()
+        .lobby_id()
+        .filter(&lobby_id)
+        .filter(|p| p.is_alive)
+        .collect();
+    players.sort_by_key(|p| p.joined_at);
+
+    if players.is_empty() {
+        panic!("No active players");
+    }
+
+    // Identify timed out player
+    let current_idx = game_state.current_player_index as usize % players.len();
+    let timed_out_player = &players[current_idx];
+
+    // Eliminate player
+    ctx.db.lobby_player().id().update(LobbyPlayer {
+        is_alive: false,
+        ..timed_out_player.clone()
+    });
+    
+    log::info!("Player {} timed out!", timed_out_player.name);
+
+    // Refresh alive players
+    let alive_players: Vec<_> = ctx.db.lobby_player()
+        .lobby_id()
+        .filter(&lobby_id)
+        .filter(|p| p.is_alive)
+        .collect();
+
+    // Check for winner
+    if alive_players.len() == 1 {
+        let winner = &alive_players[0];
+        ctx.db.lobby().id().update(Lobby {
+            status: "finished".to_string(),
+            winner_identity: Some(winner.identity),
+            winner_address: Some(winner.address.clone()),
+            updated_at: ctx.timestamp,
+            ..lobby
+        });
+        log::info!("Game finished by timeout! Winner: {} ({})", winner.name, winner.address);
+    } else {
+        // Advance turn
+        let new_player_index = if alive_players.len() > 0 {
+            // We don't increment index because the current player was removed, 
+            // so the next player falls into the same index (modulo new length)
+            // But we need to be careful about the modulo logic.
+            // If we had [A, B, C] and B (index 1) timed out. New list [A, C].
+            // We want C to play. C is now at index 1. So index stays 1.
+            // If C (index 2) timed out. New list [A, B]. We want A to play. Index 0.
+            // So we just take current_index % new_length.
+            game_state.current_player_index % alive_players.len() as u32
+        } else {
+            0
+        };
+
+        // Set new turn deadline
+        let new_deadline = ctx.timestamp.plus(std::time::Duration::from_secs(30));
+
+        ctx.db.game_state().lobby_id().update(GameState {
+            current_player_index: new_player_index,
+            turn_deadline: new_deadline,
+            ..game_state
+        });
+    }
 }
 
 /// Leave lobby (before game starts)

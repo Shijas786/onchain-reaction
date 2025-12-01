@@ -56,6 +56,7 @@ export type GameState = {
   isAnimating: boolean;
   moveCount: number;
   lastMoveAt: bigint;
+  turnDeadline: bigint;
 };
 
 export type GameMove = {
@@ -408,6 +409,20 @@ export function useLobby(lobbyId: string | null) {
     [lobbyId]
   );
 
+  const claimTimeout = useCallback(async (): Promise<boolean> => {
+    const conn = getDbConnection();
+    if (!conn || !lobbyId) return false;
+
+    try {
+      // @ts-ignore - Reducer not generated yet
+      conn.reducers.claimTimeout({ lobbyId });
+      return true;
+    } catch (err) {
+      console.error("Failed to claim timeout:", err);
+      return false;
+    }
+  }, [lobbyId]);
+
   const leaveLobby = useCallback(async (): Promise<boolean> => {
     const conn = getDbConnection();
     if (!conn || !lobbyId) return false;
@@ -462,6 +477,7 @@ export function useLobby(lobbyId: string | null) {
     confirmDeposit,
     startGame,
     makeMove,
+    claimTimeout,
     leaveLobby,
   };
 }

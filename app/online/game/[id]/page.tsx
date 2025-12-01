@@ -13,6 +13,56 @@ import { Board, Player, PlayerColor as GamePlayerColor } from "@/types/game";
 import { getMaxCapacity } from "@/lib/gameLogic";
 import { soundManager } from "@/lib/sound";
 
+function TimerDisplay({
+  turnDeadline,
+  isMyTurn,
+  isLive,
+  onClaimTimeout
+}: {
+  turnDeadline?: bigint;
+  isMyTurn: boolean;
+  isLive: boolean;
+  onClaimTimeout: () => Promise<boolean>;
+}) {
+  const [timeLeft, setTimeLeft] = useState<number>(30);
+
+  useEffect(() => {
+    if (!turnDeadline) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      // Convert microseconds to milliseconds
+      const deadline = Number(turnDeadline) / 1000;
+      const remaining = Math.max(0, Math.ceil((deadline - now) / 1000));
+      setTimeLeft(remaining);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [turnDeadline]);
+
+  if (!isLive || !turnDeadline) return null;
+
+  return (
+    <>
+      <div className={`fixed top-20 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full border-2 border-black font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-40 transition-colors ${timeLeft <= 10 ? "bg-red-100 text-red-600 animate-pulse" : "bg-white text-black"
+        }`}>
+        ⏱️ {timeLeft}s
+      </div>
+
+      {timeLeft === 0 && !isMyTurn && (
+        <div className="fixed top-32 left-1/2 -translate-x-1/2 z-50">
+          <Button
+            onClick={onClaimTimeout}
+            className="bg-red-500 text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] animate-bounce font-bold"
+          >
+            Claim Timeout ⚡
+          </Button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function OnlineGameContent() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -38,6 +88,7 @@ function OnlineGameContent() {
     alivePlayers,
     makeMove,
     leaveLobby,
+    claimTimeout,
   } = useLobby(lobbyId);
 
   // Convert SpacetimeDB board to game board format
@@ -236,6 +287,13 @@ function OnlineGameContent() {
           ))}
         </div>
       </div>
+
+      <TimerDisplay
+        turnDeadline={gameState?.turnDeadline}
+        isMyTurn={isMyTurn}
+        isLive={lobby?.status === "live"}
+        onClaimTimeout={claimTimeout}
+      />
 
       {/* Game Board */}
       <div className="relative p-0 bg-transparent rounded-none shadow-none border-none">

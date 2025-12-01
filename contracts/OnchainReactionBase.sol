@@ -286,6 +286,3 @@ contract OnchainReaction is Ownable {
         IERC20(token).safeTransfer(feeRecipient, amt);
     }
 }
-
-
-
