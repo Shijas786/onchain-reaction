@@ -490,12 +490,13 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         </div>
       </div>
 
-      {/* Token Selection (Base Only) */}
-      {selectedChain === CHAIN_IDS.BASE && (
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-slate-700">Token</label>
-          <div className="flex gap-2">
-            {(Object.keys(TOKENS) as Array<keyof typeof TOKENS>).map((token) => (
+      {/* Token Selection */}
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-slate-700">Token</label>
+        <div className="flex gap-2">
+          {(Object.keys(TOKENS) as Array<keyof typeof TOKENS>)
+            .filter(token => TOKENS[token].addresses[selectedChain as keyof typeof TOKENS[typeof token]['addresses']])
+            .map((token) => (
               <button
                 key={token}
                 onClick={() => setSelectedToken(token)}
@@ -506,7 +507,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
               >
                 {token === 'USDC' && (
                   <img
-                    src="/assets/usdc.jpg"
+                    src="/assets/usdc.png"
                     alt="USDC"
                     className="w-5 h-5 rounded-full"
                   />
@@ -521,9 +522,8 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
                 ${token}
               </button>
             ))}
-          </div>
         </div>
-      )}
+      </div>
 
       {/* Entry Fee */}
       <div className="space-y-2">
