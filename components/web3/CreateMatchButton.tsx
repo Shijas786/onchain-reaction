@@ -129,35 +129,35 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   useEffect(() => {
     if (isSuccess && txHash && step === 'approve') {
       setIsCreating(false); // Reset creating state after approval succeeds
-      
+
       const checkAllowance = async () => {
         // Wait a bit for the RPC to index the event
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         // Refetch allowance multiple times to ensure we get the latest value
         let attempts = 0;
         const maxAttempts = 3;
-        
+
         const checkAllowanceValue = async () => {
           attempts++;
           const { data: newAllowance } = await refetchAllowance();
           const currentAllowance = safeBigInt(newAllowance);
-          
+
           if (currentAllowance !== null && currentAllowance >= entryFeeWei) {
             setTxHash(undefined);
             setStep('create');
             return true;
           }
-          
+
           // If not sufficient and we have more attempts, retry
           if (attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 1500));
             return checkAllowanceValue();
           }
-          
+
           return false;
         };
-        
+
         await checkAllowanceValue();
       };
 
@@ -283,9 +283,9 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       return;
     }
 
-    // Validate max players (contract requires 2-8)
-    if (maxPlayers < 2 || maxPlayers > 8) {
-      setError("Max players must be between 2 and 8");
+    // Validate max players (contract requires 2-8, but UI limits to 5)
+    if (maxPlayers < 2 || maxPlayers > 5) {
+      setError("Max players must be between 2 and 5");
       return;
     }
 
@@ -434,7 +434,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       } else if (isTokenError) {
         setError(`This token is not supported. Please use ${selectedToken}.`);
       } else if (isValidationError) {
-        setError("Invalid match parameters. Please check entry fee (must be > 0) and max players (2-8).");
+        setError("Invalid match parameters. Please check entry fee (must be > 0) and max players (2-5).");
       } else {
         // Show more detailed error for debugging
         const detailedError = errorMessage || e?.message || "Failed to create match";
