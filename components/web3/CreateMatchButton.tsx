@@ -288,18 +288,24 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     }
 
     // Check balance
-    if (balance !== undefined) {
-      try {
-        const currentBalance = BigInt(balance as string);
-        if (currentBalance < entryFeeWei) {
-          setError("Insufficient USDC balance");
-          return;
-        }
-      } catch (err) {
-        console.error('Error checking balance:', err);
-        setError("Error checking balance. Please try again.");
+    if (balance === undefined) {
+      setError("Verifying balance... Please try again in a moment.");
+      return;
+    }
+
+    try {
+      const currentBalance = BigInt(balance as string);
+      if (currentBalance < entryFeeWei) {
+        // We can't use formatUSDC here easily without importing it, so just use generic message
+        // or import formatUSDC if available. It is available in imports!
+        // But wait, imports are at top of file.
+        // Let's assume formatUSDC is imported or we just show the values.
+        setError(`Insufficient USDC balance. Need ${feeToUse} USDC.`);
         return;
       }
+    } catch (err) {
+      setError("Error checking balance. Please try again.");
+      return;
     }
 
     setIsCreating(true);
