@@ -1,0 +1,6 @@
+﻿Checking match status:
+Chain ID: 8453
+Match ID: 8
+Arena Address: 0x7B04eb09b6748097067c7C9d97C545ADDFD7C97E
+Status: 1 (Live)
+Winner: 0x0000000000000000000000000000000000000000

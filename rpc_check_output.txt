@@ -1,0 +1,2 @@
+﻿Checking RPC URL for Base:
+URL: Not Set
