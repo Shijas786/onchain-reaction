@@ -257,7 +257,7 @@ async function main() {
         .onError((err) => {
           console.error("Subscription error:", err);
         })
-        .subscribe([`SELECT * FROM lobby WHERE status = 'finished' AND winner_address IS NOT NULL`]);
+        .subscribe([`SELECT * FROM lobby WHERE status = 'finished'`]);
     } catch (subErr) {
       console.error("Failed to create subscription:", subErr);
     }
