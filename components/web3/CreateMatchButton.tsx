@@ -113,11 +113,13 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
 
   // Determine step based on allowance
   useEffect(() => {
-    if (step === 'check' && feeToUse && entryFeeWei > BigInt(0)) {
+    if (feeToUse && entryFeeWei > BigInt(0) && allowance !== undefined) {
       const currentAllowance = safeBigInt(allowance);
       if (currentAllowance !== null && currentAllowance >= entryFeeWei) {
-        setStep('create');
-      } else if (entryFeeWei > BigInt(0)) {
+        if (step !== 'create') {
+          setStep('create');
+        }
+      } else if (entryFeeWei > BigInt(0) && step !== 'approve') {
         setStep('approve');
       }
     }
@@ -126,17 +128,37 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   // Handle successful approval
   useEffect(() => {
     if (isSuccess && txHash && step === 'approve') {
+      setIsCreating(false); // Reset creating state after approval succeeds
+      
       const checkAllowance = async () => {
         // Wait a bit for the RPC to index the event
         await new Promise(resolve => setTimeout(resolve, 2000));
-        const { data: newAllowance } = await refetchAllowance();
-
-        // Force update step if allowance is sufficient
-        const currentAllowance = safeBigInt(newAllowance);
-        if (currentAllowance !== null && currentAllowance >= entryFeeWei) {
-          setTxHash(undefined);
-          setStep('create');
-        }
+        
+        // Refetch allowance multiple times to ensure we get the latest value
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        const checkAllowanceValue = async () => {
+          attempts++;
+          const { data: newAllowance } = await refetchAllowance();
+          const currentAllowance = safeBigInt(newAllowance);
+          
+          if (currentAllowance !== null && currentAllowance >= entryFeeWei) {
+            setTxHash(undefined);
+            setStep('create');
+            return true;
+          }
+          
+          // If not sufficient and we have more attempts, retry
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            return checkAllowanceValue();
+          }
+          
+          return false;
+        };
+        
+        await checkAllowanceValue();
       };
 
       checkAllowance();
@@ -204,6 +226,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         chainId: selectedChain,
       });
       setTxHash(hash);
+      // Don't set setIsCreating(false) here - wait for transaction confirmation
     } catch (e: any) {
       console.error('[CreateMatchButton] Approval error:', e);
       const errorMessage = e?.shortMessage || e?.message || "";
@@ -611,16 +634,16 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         </button>
       )}
 
-      {/* Create Button */}
-      {step === 'create' && balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && allowance !== undefined && safeCompare(allowance, entryFeeWei, 'gte') && (
+      {/* Create Button - Show when step is 'create' and balance is sufficient */}
+      {step === 'create' && balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && (
         <button
           onClick={handleCreate}
-          disabled={isProcessing}
+          disabled={isProcessing || (allowance !== undefined && !safeCompare(allowance, entryFeeWei, 'gte'))}
           className="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-bold shadow-lg disabled:opacity-60 transition-all hover:shadow-xl"
         >
           {isPending && "Confirm in wallet..."}
           {isConfirming && "Creating match..."}
-          {!isPending && !isConfirming && "Create Match"}
+          {!isPending && !isConfirming && (allowance !== undefined && !safeCompare(allowance, entryFeeWei, 'gte') ? `Waiting for approval...` : "Create Match")}
         </button>
       )}
 
@@ -628,7 +651,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       {step === 'create' && (allowance === undefined || !safeCompare(allowance, entryFeeWei, 'gte')) && balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && (
         <div className="text-center p-3 bg-amber-50 rounded-xl border border-amber-200">
           <p className="text-xs text-amber-700">
-            Checking {selectedToken} approval...
+            {allowance === undefined ? `Checking ${selectedToken} approval...` : `Approval confirmed! You can create the match now.`}
           </p>
         </div>
       )}
