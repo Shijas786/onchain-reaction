@@ -11,7 +11,7 @@ const ARENA_ADDRESSES = {
 };
 
 const RPC_URLS = {
-    8453: process.env.RPC_URL_BASE || "https://mainnet.base.org",
+    8453: process.env.RPC_URL_BASE || "https://base.publicnode.com",
     42161: process.env.RPC_URL_ARBITRUM || "https://arb1.arbitrum.io/rpc",
 };
 
@@ -50,17 +50,14 @@ export async function finishMatch(matchId, winnerAddress) {
     const { publicClient, walletClient } = getClients(chainId);
 
     try {
-        // Simulate
-        const { request } = await publicClient.simulateContract({
+        // Execute directly (skip simulation to avoid RPC errors)
+        const hash = await walletClient.writeContract({
             address: arenaAddress,
             abi: onchainReactionAbi,
             functionName: "finishMatch",
             args: [BigInt(matchId), winnerAddress],
             account,
         });
-
-        // Execute
-        const hash = await walletClient.writeContract(request);
         console.log(`Tx sent: ${hash}`);
 
         // Wait

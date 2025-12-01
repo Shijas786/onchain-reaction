@@ -37,7 +37,7 @@ const SPACETIMEDB_CONFIG = {
 
 // RPC URLs (optional, uses default if not provided)
 const RPC_URLS: Record<number, string | undefined> = {
-  [CHAIN_IDS.BASE]: process.env.RPC_URL_BASE || "https://mainnet.base.org",
+  [CHAIN_IDS.BASE]: process.env.RPC_URL_BASE || "https://base.publicnode.com",
   [CHAIN_IDS.ARBITRUM]: process.env.RPC_URL_ARBITRUM || "https://arb1.arbitrum.io/rpc",
 };
 
@@ -134,17 +134,14 @@ async function finalizeMatchOnChain(
     const walletClient = getWalletClient(chainId);
     const publicClient = getPublicClient(chainId);
 
-    // Simulate first
-    const { request } = await publicClient.simulateContract({
+    // Execute transaction directly
+    const txHash = await walletClient.writeContract({
       address: arenaAddress,
       abi: onchainReactionAbi,
       functionName: "finishMatch",
       args: [matchId, winnerAddress],
-      account: account.address,
+      account,
     });
-
-    // Execute transaction
-    const txHash = await walletClient.writeContract(request);
     console.log(`finishMatch transaction sent: ${txHash}`);
 
     // Wait for confirmation
