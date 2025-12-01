@@ -6,11 +6,23 @@ import { onchainReactionAbi } from "./abi.js";
 
 // === CONFIG ===
 
-// PUT YOUR REAL CONTRACT ADDRESS HERE
-// Arbitrum Address
-const CONTRACT_ADDRESS = "0x859Bf3A3DD44D7607A7121ab1807F6BF90d7E86c";
+const CHAIN_IDS = {
+    BASE: 8453,
+    ARBITRUM: 42161
+};
 
-const RPC_URL = "https://arb-mainnet.g.alchemy.com/v2/eTjwZLPVQJs7qTv3Inh338N4Uss_z7OT";
+const CONFIG = {
+    [CHAIN_IDS.BASE]: {
+        chain: base,
+        rpcUrl: "https://mainnet.base.org",
+        contractAddress: "0x7B04eb09b6748097067c7C9d97C545ADDFD7C97E"
+    },
+    [CHAIN_IDS.ARBITRUM]: {
+        chain: arbitrum,
+        rpcUrl: "https://arb-mainnet.g.alchemy.com/v2/eTjwZLPVQJs7qTv3Inh338N4Uss_z7OT",
+        contractAddress: "0x859Bf3A3DD44D7607A7121ab1807F6BF90d7E86c"
+    }
+};
 
 // === ORACLE KEY ===
 let oraclePk = process.env.ORACLE_PRIVATE_KEY;
@@ -23,24 +35,37 @@ if (!oraclePk.startsWith("0x")) oraclePk = "0x" + oraclePk;
 const account = privateKeyToAccount(oraclePk);
 
 // === CLIENTS ===
-const provider = createPublicClient({
-    chain: arbitrum,
-    transport: http(RPC_URL),
-});
+const clients = {};
 
-const walletClient = createWalletClient({
-    chain: arbitrum,
-    transport: http(RPC_URL),
-    account,
-});
+for (const [chainId, config] of Object.entries(CONFIG)) {
+    clients[chainId] = {
+        public: createPublicClient({
+            chain: config.chain,
+            transport: http(config.rpcUrl),
+        }),
+        wallet: createWalletClient({
+            chain: config.chain,
+            transport: http(config.rpcUrl),
+            account,
+        })
+    };
+}
 
 // === FINISH MATCH ===
-export async function finishMatch(matchId, winnerAddress) {
-    console.log(`Finishing match #${matchId}, winner = ${winnerAddress}`);
+export async function finishMatch(chainId, matchId, winnerAddress) {
+    console.log(`Finishing match #${matchId} on chain ${chainId}, winner = ${winnerAddress}`);
+
+    const client = clients[chainId];
+    if (!client) {
+        console.error(`No client for chain ${chainId}`);
+        return { success: false, error: "Unsupported chain" };
+    }
+
+    const contractAddress = CONFIG[chainId].contractAddress;
 
     try {
-        const hash = await walletClient.writeContract({
-            address: CONTRACT_ADDRESS,
+        const hash = await client.wallet.writeContract({
+            address: contractAddress,
             abi: onchainReactionAbi,
             functionName: "finishMatch",
             args: [BigInt(matchId), winnerAddress],
@@ -48,7 +73,7 @@ export async function finishMatch(matchId, winnerAddress) {
 
         console.log("Tx sent:", hash);
 
-        const receipt = await provider.waitForTransactionReceipt({ hash });
+        const receipt = await client.public.waitForTransactionReceipt({ hash });
 
         console.log("Tx confirmed:", receipt);
 
@@ -103,20 +128,13 @@ async function callReducer(reducerName, args) {
 export async function pollMatches() {
     console.log("Polling matches...");
 
-    // 1. Fetch Lobbies and GameStates
-    // Note: SpacetimeDB SQL API returns { schema: [...], data: [[...], [...]] }
-    // We need to map columns carefully.
-
-    // For now, let's assume we can query specific columns to be safe
-    // Or just fetch all and map by index if we know the schema order.
-    // Better: Use the SQL API which returns column names in schema.
-
     try {
         // Fetch live lobbies
+        // Added chain_id to query
         const lobbyRes = await fetch(`${STDB_HOST}/database/sql/${STDB_NAME}`, {
             method: "POST",
             headers: { "Content-Type": "text/plain" },
-            body: `SELECT id, match_id, status, winner_address FROM lobby WHERE status = 'live' OR status = 'finished'`
+            body: `SELECT id, match_id, status, winner_address, chain_id FROM lobby WHERE status = 'live' OR status = 'finished'`
         });
         const lobbyJson = await lobbyRes.json();
 
@@ -125,27 +143,32 @@ export async function pollMatches() {
             id: row[0],
             matchId: row[1],
             status: row[2],
-            winnerAddress: row[3]
+            winnerAddress: row[3],
+            chainId: row[4]
         }));
 
         for (const lobby of lobbies) {
             // Case 1: Game Finished -> Settle on Chain
             if (lobby.status === 'finished' && lobby.winnerAddress) {
-                // TODO: Check if already settled on chain to avoid duplicate txs?
-                // For now, just try to finish. The contract might revert if already finished, which is fine.
-                // Ideally we check on-chain state first.
+                const client = clients[lobby.chainId];
+                if (!client) {
+                    console.warn(`Skipping match ${lobby.matchId}: Unsupported chain ${lobby.chainId}`);
+                    continue;
+                }
+
+                const contractAddress = CONFIG[lobby.chainId].contractAddress;
 
                 // We can check if match is active on chain
-                const isMatchActive = await provider.readContract({
-                    address: CONTRACT_ADDRESS,
+                const isMatchActive = await client.public.readContract({
+                    address: contractAddress,
                     abi: onchainReactionAbi,
                     functionName: "isMatchActive",
                     args: [BigInt(lobby.matchId)]
                 });
 
                 if (isMatchActive) {
-                    console.log(`Match ${lobby.matchId} finished in DB but active on chain. Settling...`);
-                    await finishMatch(lobby.matchId, lobby.winnerAddress);
+                    console.log(`Match ${lobby.matchId} finished in DB but active on chain ${lobby.chainId}. Settling...`);
+                    await finishMatch(lobby.chainId, lobby.matchId, lobby.winnerAddress);
                 } else {
                     // console.log(`Match ${lobby.matchId} already settled.`);
                 }
@@ -169,11 +192,7 @@ export async function pollMatches() {
 
                     if (nowMs > turnDeadlineMs) {
                         console.log(`Match ${lobby.matchId} (Lobby ${lobby.id}) timed out! Triggering claim_timeout...`);
-                        await callReducer("claim_timeout", [lobby.id]); // Args format depends on reducer
-                        // Note: claim_timeout takes (lobby_id: String). 
-                        // The JSON array body should be the arguments.
-                        // For a single string arg, it might be ["lobby_id_value"] or just "lobby_id_value" depending on client.
-                        // Standard SpacetimeDB HTTP API expects array of args.
+                        await callReducer("claim_timeout", [lobby.id]);
                     }
                 }
             }
