@@ -23,7 +23,7 @@ export default function Home() {
         <DoodleText />
 
         <div className="text-center space-y-2">
-          <p className="text-2xl font-medium text-slate-500">Orbs Edition</p>
+
         </div>
 
         <div className="flex flex-col gap-4 w-full max-w-xs">

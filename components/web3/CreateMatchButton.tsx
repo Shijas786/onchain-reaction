@@ -391,7 +391,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
                 hostName: address.slice(0, 6) + "..." + address.slice(-4),
                 lobbyId: newRoomCode,
               });
-              console.log('[CreateMatchButton] SpacetimeDB lobby created:', newRoomCode);
+
             }
           } catch (err) {
             console.error('[CreateMatchButton] Failed to create SpacetimeDB lobby:', err);

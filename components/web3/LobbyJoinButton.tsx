@@ -97,10 +97,10 @@ export function LobbyJoinButton({
               // Join SpacetimeDB lobby
               const joined = await joinLobby(lobbyId, address, `Player ${address.slice(0, 6)}...${address.slice(-4)}`);
               if (joined) {
-                console.log('[LobbyJoinButton] Successfully joined SpacetimeDB lobby');
+
                 // Confirm deposit
                 await confirmDeposit(lobbyId, address);
-                console.log('[LobbyJoinButton] Deposit confirmed in SpacetimeDB');
+
               }
             }
           } catch (err) {

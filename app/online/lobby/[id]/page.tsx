@@ -139,7 +139,7 @@ function LobbyContent() {
             hostName: match.host.slice(0, 6) + "..." + match.host.slice(-4),
             lobbyId: roomCode,
           });
-          console.log('[LobbyPage] Created SpacetimeDB lobby for existing match');
+
         } catch (err) {
           console.error('[LobbyPage] Failed to create lobby (may already exist):', err);
         }
@@ -153,7 +153,7 @@ function LobbyContent() {
     if (isSpacetimeConnected && spacetimeLobby && address && spacetimePlayers) {
       const hostPlayer = spacetimePlayers.find(p => p.address.toLowerCase() === spacetimeLobby.hostAddress.toLowerCase());
       if (hostPlayer && !hostPlayer.hasDeposited && hostPlayer.address.toLowerCase() === address.toLowerCase()) {
-        console.log('[LobbyPage] Host has not deposited in SpacetimeDB. Confirming now...');
+
         confirmDeposit(roomCode, address);
       }
     }
@@ -209,7 +209,7 @@ function LobbyContent() {
 
     // Redirect when lobby status is "live" and player is in the lobby
     if (lobbyStatus === "live" && (hasJoined || isPlayerInSpacetimeLobby)) {
-      console.log('[LobbyPage] Game started! Redirecting player to game page...', { lobbyStatus, hasGameState, hasJoined, isPlayerInSpacetimeLobby });
+
       router.push(`/online/game/${roomCode}?chainId=${chainId}&arena=${arenaAddress}`);
     }
   }, [spacetimeLobby?.status, spacetimeGameState, hasJoined, address, spacetimePlayers, roomCode, chainId, arenaAddress, router]);
@@ -246,7 +246,7 @@ function LobbyContent() {
       // 1. Start match on-chain (if not already live)
       if (match?.status === 0) { // Pending
         try {
-          console.log('[LobbyPage] Starting match on-chain...');
+
           const hash = await writeContractAsync({
             address: arenaAddress,
             abi: ChainOrbArenaAbi,
@@ -254,7 +254,7 @@ function LobbyContent() {
             args: [BigInt(matchId)],
             chainId,
           });
-          console.log('[LobbyPage] startMatch tx sent:', hash);
+
           // We don't strictly wait for confirmation to avoid blocking UI, 
           // but ideally we should. For now, proceed to SpacetimeDB start.
         } catch (err) {
@@ -267,10 +267,7 @@ function LobbyContent() {
 
       // 2. Start game in SpacetimeDB
       if (isSpacetimeConnected && startSpacetimeGame) {
-        console.log('[LobbyPage] Starting game in SpacetimeDB...', {
-          players: spacetimePlayers?.map(p => ({ name: p.name, hasDeposited: p.hasDeposited })) || [],
-          lobbyStatus: spacetimeLobby?.status
-        });
+
         const started = await startSpacetimeGame();
         if (!started) {
           console.error('Failed to start game in SpacetimeDB');
@@ -278,7 +275,7 @@ function LobbyContent() {
           alert('Failed to start game. Please check console for details and try again.');
           return;
         }
-        console.log('[LobbyPage] Game start command sent. Waiting for status to update...');
+
         // Don't navigate manually - let the useEffect handle redirect when status becomes "live"
       } else {
         console.error('[LobbyPage] Cannot start game: not connected or startGame function missing');

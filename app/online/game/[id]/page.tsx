@@ -27,7 +27,7 @@ function TimerDisplay({
   const [timeLeft, setTimeLeft] = useState<number>(30);
 
   useEffect(() => {
-    console.log("[TimerDisplay] turnDeadline:", turnDeadline, "isLive:", isLive);
+
     if (!turnDeadline) return;
 
     const interval = setInterval(() => {
@@ -156,7 +156,7 @@ function OnlineGameContent() {
 
       const player = players.find(p => p.identity.toHexString() === lastMove.playerIdentity.toHexString());
       if (player) {
-        console.log(`[OnlineGame] Animating move: ${player.name} at (${lastMove.row}, ${lastMove.col})`);
+
         animateMove(lastMove.row, lastMove.col, player.color as GamePlayerColor);
       }
     }
@@ -176,7 +176,7 @@ function OnlineGameContent() {
         setHasTriggeredOracle(true);
         const oracleUrl = process.env.NEXT_PUBLIC_ORACLE_API_URL;
         if (oracleUrl) {
-          console.log("Triggering Oracle at:", oracleUrl);
+
           fetch(oracleUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -186,7 +186,7 @@ function OnlineGameContent() {
             })
           })
             .then(res => res.json())
-            .then(data => console.log("Oracle response:", data))
+
             .catch(err => console.error("Oracle trigger failed:", err));
         }
       }

@@ -12,7 +12,7 @@ const fredoka = Fredoka({
 });
 
 export const metadata: Metadata = {
-  title: "Chain Reaction: Orbs Edition",
+  title: "Onchain Reaction",
   description: "A cute and explosive chain reaction game!",
 };
 
