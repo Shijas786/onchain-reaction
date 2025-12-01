@@ -49,6 +49,8 @@ import Ping from "./ping_reducer";
 export { Ping };
 import StartGame from "./start_game_reducer";
 export { StartGame };
+import ClaimTimeout from "./claim_timeout_reducer";
+export { ClaimTimeout };
 
 // Import and reexport all procedure arg types
 
@@ -77,12 +79,16 @@ const tablesSchema = __schema(
   __table({
     name: 'game_move',
     indexes: [
-      { name: 'id', algorithm: 'btree', columns: [
-        'id',
-      ] },
-      { name: 'lobby_id', algorithm: 'btree', columns: [
-        'lobbyId',
-      ] },
+      {
+        name: 'id', algorithm: 'btree', columns: [
+          'id',
+        ]
+      },
+      {
+        name: 'lobby_id', algorithm: 'btree', columns: [
+          'lobbyId',
+        ]
+      },
     ],
     constraints: [
       { name: 'game_move_id_key', constraint: 'unique', columns: ['id'] },
@@ -91,9 +97,11 @@ const tablesSchema = __schema(
   __table({
     name: 'game_state',
     indexes: [
-      { name: 'lobby_id', algorithm: 'btree', columns: [
-        'lobbyId',
-      ] },
+      {
+        name: 'lobby_id', algorithm: 'btree', columns: [
+          'lobbyId',
+        ]
+      },
     ],
     constraints: [
       { name: 'game_state_lobby_id_key', constraint: 'unique', columns: ['lobbyId'] },
@@ -102,9 +110,11 @@ const tablesSchema = __schema(
   __table({
     name: 'lobby',
     indexes: [
-      { name: 'id', algorithm: 'btree', columns: [
-        'id',
-      ] },
+      {
+        name: 'id', algorithm: 'btree', columns: [
+          'id',
+        ]
+      },
     ],
     constraints: [
       { name: 'lobby_id_key', constraint: 'unique', columns: ['id'] },
@@ -113,12 +123,16 @@ const tablesSchema = __schema(
   __table({
     name: 'lobby_player',
     indexes: [
-      { name: 'id', algorithm: 'btree', columns: [
-        'id',
-      ] },
-      { name: 'lobby_id', algorithm: 'btree', columns: [
-        'lobbyId',
-      ] },
+      {
+        name: 'id', algorithm: 'btree', columns: [
+          'id',
+        ]
+      },
+      {
+        name: 'lobby_id', algorithm: 'btree', columns: [
+          'lobbyId',
+        ]
+      },
     ],
     constraints: [
       { name: 'lobby_player_id_key', constraint: 'unique', columns: ['id'] },
@@ -135,6 +149,7 @@ const reducersSchema = __reducers(
   __reducerSchema("make_move", MakeMove),
   __reducerSchema("ping", Ping),
   __reducerSchema("start_game", StartGame),
+  __reducerSchema("claim_timeout", ClaimTimeout),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
@@ -173,10 +188,10 @@ export type ErrorContext = __ErrorContextInterface<typeof REMOTE_MODULE>;
 export type SubscriptionHandle = __SubscriptionHandleImpl<typeof REMOTE_MODULE>;
 
 /** Builder class to configure a new subscription to the remote SpacetimeDB instance. */
-export class SubscriptionBuilder extends __SubscriptionBuilderImpl<typeof REMOTE_MODULE> {}
+export class SubscriptionBuilder extends __SubscriptionBuilderImpl<typeof REMOTE_MODULE> { }
 
 /** Builder class to configure a new database connection to the remote SpacetimeDB instance. */
-export class DbConnectionBuilder extends __DbConnectionBuilder<DbConnection> {}
+export class DbConnectionBuilder extends __DbConnectionBuilder<DbConnection> { }
 
 /** The typed database connection to manage connections to the remote SpacetimeDB instance. This class has type information specific to the generated module. */
 export class DbConnection extends __DbConnectionImpl<typeof REMOTE_MODULE> {

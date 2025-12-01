@@ -414,7 +414,6 @@ export function useLobby(lobbyId: string | null) {
     if (!conn || !lobbyId) return false;
 
     try {
-      // @ts-ignore - Reducer not generated yet
       conn.reducers.claimTimeout({ lobbyId });
       return true;
     } catch (err) {
