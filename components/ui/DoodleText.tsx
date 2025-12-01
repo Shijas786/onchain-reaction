@@ -27,7 +27,7 @@ export const DoodleText = () => {
                         strokeWidth="4"
                         style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", sans-serif' }}
                     >
-                        CHAIN REACTION
+                        ONCHAIN REACTION
                     </motion.text>
 
                     {/* Main Text */}
@@ -43,7 +43,7 @@ export const DoodleText = () => {
                         animate={{ strokeDashoffset: 0 }}
                         transition={{ duration: 3, ease: "easeInOut", repeat: Infinity, repeatType: "reverse", repeatDelay: 1 }}
                     >
-                        CHAIN REACTION
+                        ONCHAIN REACTION
                     </motion.text>
 
                     {/* Color Fill Layer (Optional, maybe just outline is better for doodle) */}
@@ -58,7 +58,7 @@ export const DoodleText = () => {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 2, duration: 1 }}
                     >
-                        CHAIN REACTION
+                        ONCHAIN REACTION
                     </motion.text>
                 </g>
             </svg>
