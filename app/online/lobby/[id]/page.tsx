@@ -322,7 +322,7 @@ function LobbyContent() {
   const statusText = lobbyStatus === "waiting" ? "Waiting" : lobbyStatus === "live" ? "Live" : "Finished";
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 relative overflow-hidden">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-8 relative overflow-y-auto">
       <DoodleBackground />
 
       <div className="w-full max-w-2xl relative z-10 space-y-6">

@@ -393,7 +393,7 @@ function OnlineGameContent() {
 
 export default function OnlineGamePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-[#f0f0f0] p-4 overflow-hidden touch-none">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[#f0f0f0] p-4 overflow-hidden">
       <Suspense
         fallback={
           <div className="flex flex-col items-center gap-4">

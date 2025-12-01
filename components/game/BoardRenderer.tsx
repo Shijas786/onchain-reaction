@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useMemo, useCallback } from "react"
 import { Board, Cell, PlayerColor } from "@/types/game";
 import { getMaxCapacity } from "@/lib/gameLogic";
 import { soundManager } from "@/lib/sound";
+import { ZoomPanPinch } from "@/components/ui/ZoomPanPinch";
 
 interface BoardRendererProps {
     board: Board;
@@ -50,26 +51,26 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     clearExplosionQueue,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    
+
     // Calculate dynamic canvas size and cell size based on board dimensions
     const { canvasWidth, canvasHeight, cellSize } = useMemo(() => {
         // Calculate required world space
         const worldWidth = cols * BASE_CELL_SIZE;
         const worldHeight = rows * BASE_CELL_SIZE;
-        
+
         // Calculate required canvas size with extra padding to ensure corners are visible
         // Add extra padding for diagonal corners (sqrt(2) factor)
         const cornerPadding = Math.ceil(PADDING * 1.5); // Extra padding for corners
         const requiredWidth = Math.min(MAX_CANVAS_WIDTH, Math.max(MIN_CANVAS_WIDTH, worldWidth + cornerPadding * 2));
         const requiredHeight = Math.min(MAX_CANVAS_HEIGHT, Math.max(MIN_CANVAS_HEIGHT, worldHeight + cornerPadding * 2));
-        
+
         // Calculate scale factor if board is too large
         const widthScale = (requiredWidth - cornerPadding * 2) / worldWidth;
         const heightScale = (requiredHeight - cornerPadding * 2) / worldHeight;
         const scale = Math.min(widthScale, heightScale, 1); // Don't scale up, only down
-        
+
         const finalCellSize = BASE_CELL_SIZE * scale;
-        
+
         return {
             canvasWidth: requiredWidth,
             canvasHeight: requiredHeight,
@@ -466,7 +467,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         console.log('[BoardRenderer] Canvas clicked', { animating });
-        
+
         // Don't block clicks - let the game page handle validation
         // if (animating) return;
 
@@ -518,13 +519,13 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     };
 
     return (
-        <div className="flex justify-center items-center p-0 w-full max-w-full overflow-hidden">
+        <ZoomPanPinch className="w-full h-full flex justify-center items-center">
             <canvas
                 ref={canvasRef}
                 width={canvasWidth}
                 height={canvasHeight}
                 onClick={handleCanvasClick}
-                className="cursor-pointer touch-none"
+                className="cursor-pointer"
                 style={{
                     width: '100%',
                     maxWidth: 'min(100vw - 1rem, 1800px)', // Larger on desktop
@@ -538,6 +539,6 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
                     objectFit: 'contain',
                 }}
             />
-        </div>
+        </ZoomPanPinch>
     );
 };

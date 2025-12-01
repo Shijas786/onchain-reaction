@@ -132,7 +132,7 @@ function LocalGameContent() {
 
 export default function LocalGame() {
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4 overflow-hidden touch-none">
+        <main className="flex min-h-screen flex-col items-center justify-center bg-transparent p-4 overflow-hidden">
             <Suspense fallback={<div className="text-green-500 font-mono">Loading game...</div>}>
                 <LocalGameContent />
             </Suspense>
