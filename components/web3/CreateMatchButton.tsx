@@ -176,7 +176,6 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       // For Base, always reset existing allowance to 0 first (required by Base USDC)
       if (selectedChain === CHAIN_IDS.BASE && hasExistingAllowance) {
         try {
-          console.log('[CreateMatchButton] Resetting Base USDC allowance to 0...');
           const resetHash = await writeContractAsync({
             address: usdcAddress,
             abi: ERC20Abi,
@@ -184,12 +183,10 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             args: [arenaAddress, BigInt(0)],
             chainId: selectedChain,
           });
-          console.log('[CreateMatchButton] Reset hash:', resetHash);
           // Wait for reset to confirm
           if (publicClient) {
             await publicClient.waitForTransactionReceipt({ hash: resetHash });
           }
-          console.log('[CreateMatchButton] Reset confirmed');
         } catch (resetErr) {
           console.warn('[CreateMatchButton] Allowance reset failed or not needed:', resetErr);
         }

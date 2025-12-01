@@ -127,7 +127,6 @@ export function LobbyJoinButton({
         try {
           const currentAllowance = BigInt(allowance ? String(allowance) : "0");
           if (currentAllowance > BigInt(0)) {
-            console.log('[LobbyJoinButton] Resetting Base USDC allowance to 0...');
             const resetHash = await writeContractAsync({
               address: usdcAddress,
               abi: ERC20Abi,
@@ -135,12 +134,10 @@ export function LobbyJoinButton({
               args: [arenaAddress, BigInt(0)],
               chainId,
             });
-            console.log('[LobbyJoinButton] Reset hash:', resetHash);
             // Wait for reset to confirm
             if (publicClient) {
               await publicClient.waitForTransactionReceipt({ hash: resetHash });
             }
-            console.log('[LobbyJoinButton] Reset confirmed');
           }
         } catch (resetErr) {
           console.warn('[LobbyJoinButton] Allowance reset failed or not needed:', resetErr);
