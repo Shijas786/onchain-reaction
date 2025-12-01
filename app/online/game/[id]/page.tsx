@@ -137,7 +137,7 @@ function OnlineGameContent() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              id: lobby.matchId,
+              id: String(lobby.matchId),
               winner: lobby.winnerAddress
             })
           })
@@ -229,19 +229,19 @@ function OnlineGameContent() {
             <div
               key={player.id}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all ${currentTurnPlayer?.identity?.toHexString?.() === player.id
-                  ? "bg-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] scale-105"
-                  : "bg-white/50 border-transparent opacity-60"
+                ? "bg-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] scale-105"
+                : "bg-white/50 border-transparent opacity-60"
                 } ${!player.isAlive ? "opacity-30 grayscale" : ""}`}
             >
               <div
                 className={`w-4 h-4 rounded-full border border-black ${player.color === "red" ? "bg-[#FF9AA2]" :
-                    player.color === "blue" ? "bg-[#C7CEEA]" :
-                      player.color === "green" ? "bg-[#B5EAD7]" :
-                        player.color === "yellow" ? "bg-[#FFF7B1]" :
-                          player.color === "purple" ? "bg-[#E0BBE4]" :
-                            player.color === "orange" ? "bg-[#FFDAC1]" :
-                              player.color === "pink" ? "bg-[#F8BBD0]" :
-                                "bg-[#B2EBF2]"
+                  player.color === "blue" ? "bg-[#C7CEEA]" :
+                    player.color === "green" ? "bg-[#B5EAD7]" :
+                      player.color === "yellow" ? "bg-[#FFF7B1]" :
+                        player.color === "purple" ? "bg-[#E0BBE4]" :
+                          player.color === "orange" ? "bg-[#FFDAC1]" :
+                            player.color === "pink" ? "bg-[#F8BBD0]" :
+                              "bg-[#B2EBF2]"
                   }`}
               />
               <span className="text-black text-xs font-bold truncate max-w-[80px]">

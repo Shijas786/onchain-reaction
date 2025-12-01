@@ -11,7 +11,7 @@ if (PRIVATE_KEY) {
     try {
         const account = privateKeyToAccount(PRIVATE_KEY);
         console.log(`PRIVATE_KEY Address: ${account.address}`);
-    } catch (e) {
+    } catch (e: any) {
         console.log(`PRIVATE_KEY: Invalid (${e.message})`);
     }
 } else {
@@ -22,7 +22,7 @@ if (ORACLE_PK) {
     try {
         const oracleAccount = privateKeyToAccount(ORACLE_PK);
         console.log(`ORACLE_PRIVATE_KEY Address: ${oracleAccount.address}`);
-    } catch (e) {
+    } catch (e: any) {
         console.log(`ORACLE_PRIVATE_KEY: Invalid (${e.message})`);
     }
 } else {
