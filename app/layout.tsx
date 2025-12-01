@@ -29,7 +29,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${fredoka.variable} antialiased font-sans text-slate-900 overflow-hidden select-none touch-none`}
+        className={`${fredoka.variable} antialiased font-sans text-slate-900 select-none touch-none`}
       >
         {/* Wrap children with ContextProvider, passing cookies */}
         <ContextProvider cookies={cookies}>{children}</ContextProvider>
