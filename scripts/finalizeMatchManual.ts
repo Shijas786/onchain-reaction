@@ -1,31 +1,15 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 import { createPublicClient, createWalletClient, http } from "viem";
-import { base, arbitrum } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
+import { base, arbitrum } from "viem/chains";
 import { onchainReactionAbi } from "../lib/onchainReaction";
 import { ARENA_ADDRESSES, CHAIN_IDS } from "../lib/contracts";
 
-const ORACLE_PK = process.env.ORACLE_PRIVATE_KEY as `0x${string}`;
-if (!ORACLE_PK) {
-    throw new Error("Missing ORACLE_PRIVATE_KEY in environment variables");
-}
-
-const account = privateKeyToAccount(ORACLE_PK);
-
 const RPC_URLS: Record<number, string | undefined> = {
-    [CHAIN_IDS.BASE]: process.env.RPC_URL_BASE,
-    [CHAIN_IDS.ARBITRUM]: process.env.RPC_URL_ARBITRUM,
+    [CHAIN_IDS.BASE]: process.env.RPC_URL_BASE || "https://mainnet.base.org",
+    [CHAIN_IDS.ARBITRUM]: process.env.RPC_URL_ARBITRUM || "https://arb1.arbitrum.io/rpc",
 };
-
-function getWalletClient(chainId: number) {
-    const chain = chainId === CHAIN_IDS.BASE ? base : arbitrum;
-    const rpcUrl = RPC_URLS[chainId];
-    return createWalletClient({
-        chain,
-        transport: rpcUrl ? http(rpcUrl) : http(),
-        account,
-    });
-}
 
 function getPublicClient(chainId: number) {
     const chain = chainId === CHAIN_IDS.BASE ? base : arbitrum;
@@ -36,7 +20,20 @@ function getPublicClient(chainId: number) {
     });
 }
 
+// Add Oracle Key
+let oraclePk = process.env.ORACLE_PRIVATE_KEY;
+if (!oraclePk) {
+    // Fallback for manual run if env missing
+    console.error("Missing ORACLE_PRIVATE_KEY");
+    process.exit(1);
+}
+if (!oraclePk.startsWith("0x")) {
+    oraclePk = `0x${oraclePk}`;
+}
+const ORACLE_PK = oraclePk as `0x${string}`;
+
 async function main() {
+    // ... existing args parsing ...
     const args = process.argv.slice(2);
     if (args.length < 3) {
         console.error("Usage: npx tsx scripts/finalizeMatchManual.ts <chainId> <matchId> <winnerAddress>");
@@ -47,7 +44,7 @@ async function main() {
     const matchId = BigInt(args[1]);
     const winnerAddress = args[2] as `0x${string}`;
 
-    console.log(`Finalizing match manually:`);
+    console.log(`Finalizing Match:`);
     console.log(`Chain ID: ${chainId}`);
     console.log(`Match ID: ${matchId}`);
     console.log(`Winner: ${winnerAddress}`);
@@ -58,46 +55,35 @@ async function main() {
     }
 
     const publicClient = getPublicClient(chainId);
-    const walletClient = getWalletClient(chainId);
+
+    // Setup Wallet
+    const account = privateKeyToAccount(ORACLE_PK);
+    const chain = chainId === CHAIN_IDS.BASE ? base : arbitrum;
+    const rpcUrl = RPC_URLS[chainId];
+
+    const walletClient = createWalletClient({
+        account,
+        chain,
+        transport: rpcUrl ? http(rpcUrl) : http(),
+    });
 
     try {
-        // Check status first
-        const matchInfo = await publicClient.readContract({
-            address: arenaAddress,
-            abi: onchainReactionAbi,
-            functionName: "matches",
-            args: [matchId],
-        });
-        const status = matchInfo[5] as number;
-        console.log(`Current Match Status: ${status} (0=Pending, 1=Live, 2=Finished, 3=PaidOut, 4=Cancelled)`);
-
-        if (status >= 2) {
-            console.log("Match already finished or paid out.");
-            return;
-        }
-
-        // Simulate
-        const { request } = await publicClient.simulateContract({
+        console.log("Sending finishMatch transaction...");
+        const hash = await walletClient.writeContract({
             address: arenaAddress,
             abi: onchainReactionAbi,
             functionName: "finishMatch",
             args: [matchId, winnerAddress],
-            account: account.address,
         });
+        console.log(`✅ Transaction sent! Hash: ${hash}`);
 
-        // Execute
-        const txHash = await walletClient.writeContract(request);
-        console.log(`Transaction sent: ${txHash}`);
+        console.log("Waiting for confirmation...");
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        console.log(`✅ Transaction confirmed! Block: ${receipt.blockNumber}`);
 
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-        if (receipt.status === "success") {
-            console.log("✅ Match finalized successfully!");
-        } else {
-            console.error("❌ Transaction reverted");
-        }
-
-    } catch (error) {
-        console.error("Error:", error);
+    } catch (error: any) {
+        console.error("Error Finalizing:", error);
+        if (error.cause) console.error("Cause:", error.cause);
     }
 }
 

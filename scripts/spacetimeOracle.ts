@@ -21,10 +21,14 @@ import {
 type LobbyType = Infer<typeof Lobby>;
 type LobbyRowType = Infer<typeof LobbyRow>;
 
-const ORACLE_PK = process.env.ORACLE_PRIVATE_KEY as `0x${string}`;
-if (!ORACLE_PK) {
+let oraclePk = process.env.ORACLE_PRIVATE_KEY;
+if (!oraclePk) {
   throw new Error("Missing ORACLE_PRIVATE_KEY in environment variables");
 }
+if (!oraclePk.startsWith("0x")) {
+  oraclePk = `0x${oraclePk}`;
+}
+const ORACLE_PK = oraclePk as `0x${string}`;
 
 const SPACETIMEDB_CONFIG = {
   host: process.env.NEXT_PUBLIC_SPACETIMEDB_HOST || "wss://maincloud.spacetimedb.com",
@@ -33,8 +37,8 @@ const SPACETIMEDB_CONFIG = {
 
 // RPC URLs (optional, uses default if not provided)
 const RPC_URLS: Record<number, string | undefined> = {
-  [CHAIN_IDS.BASE]: process.env.RPC_URL_BASE,
-  [CHAIN_IDS.ARBITRUM]: process.env.RPC_URL_ARBITRUM,
+  [CHAIN_IDS.BASE]: process.env.RPC_URL_BASE || "https://mainnet.base.org",
+  [CHAIN_IDS.ARBITRUM]: process.env.RPC_URL_ARBITRUM || "https://arb1.arbitrum.io/rpc",
 };
 
 const account = privateKeyToAccount(ORACLE_PK);

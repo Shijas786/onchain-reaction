@@ -107,5 +107,44 @@ export const onchainReactionAbi = [
     inputs: [],
     outputs: [{ name: "", type: "uint256" }],
   },
+
+  // owner() -> address
+  {
+    type: "function",
+    name: "owner",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+
+  // oracle() -> address
+  {
+    type: "function",
+    name: "oracle",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+
+  // isPlayerInMatch(matchId, player) -> bool
+  {
+    type: "function",
+    name: "isPlayerInMatch",
+    stateMutability: "view",
+    inputs: [
+      { name: "matchId", type: "uint256" },
+      { name: "player", type: "address" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+
+  // getPlayers(matchId) -> address[]
+  {
+    type: "function",
+    name: "getPlayers",
+    stateMutability: "view",
+    inputs: [{ name: "matchId", type: "uint256" }],
+    outputs: [{ name: "", type: "address[]" }],
+  },
 ] as const;
 
