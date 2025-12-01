@@ -375,25 +375,32 @@ function OnlineGameContent() {
               </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </>
-  );
+      {/* Debug Overlay */}
+        <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded-xl text-xs font-mono z-50 pointer-events-none">
+          <p>Lobby Status: {lobby?.status}</p>
+          <p>Game State: {gameState ? "Loaded" : "Missing"}</p>
+          <p>Turn Deadline: {gameState?.turnDeadline?.toString() || "undefined"}</p>
+          <p>Is Live: {lobby?.status === "live" ? "Yes" : "No"}</p>
+          <p>My Turn: {isMyTurn ? "Yes" : "No"}</p>
+          <p>Players: {players.length}</p>
+        </div>
+      </>
+      );
 }
 
-export default function OnlineGamePage() {
+      export default function OnlineGamePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-[#f0f0f0] p-4 overflow-hidden touch-none">
-      <Suspense
-        fallback={
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin" />
-            <p className="text-black font-bold">Loading...</p>
-          </div>
-        }
-      >
-        <OnlineGameContent />
-      </Suspense>
-    </main>
-  );
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[#f0f0f0] p-4 overflow-hidden touch-none">
+        <Suspense
+          fallback={
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin" />
+              <p className="text-black font-bold">Loading...</p>
+            </div>
+          }
+        >
+          <OnlineGameContent />
+        </Suspense>
+      </main>
+      );
 }
