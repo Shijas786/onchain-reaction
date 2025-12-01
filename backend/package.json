@@ -1,0 +1,16 @@
+{
+    "name": "oracle",
+    "version": "1.0.0",
+    "description": "Oracle backend for Onchain Reaction",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "express": "^4.19.2",
+        "viem": "^2.9.16",
+        "dotenv": "^16.4.5",
+        "cors": "^2.8.5"
+    }
+}
