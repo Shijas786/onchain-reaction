@@ -136,7 +136,7 @@ function OnlineGameContent() {
   // Handle cell click
   const handleCellClick = async (row: number, col: number) => {
     if (lobby?.status !== "live" || !isMyTurn || isAnimating) return;
-    // soundManager.playPop(); // Handled by animateMove
+    soundManager.playPop();
     await makeMove(row, col);
   };
 

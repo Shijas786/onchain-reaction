@@ -80,24 +80,6 @@ export const useVisualBoard = (initialBoard: Board | null, rows: number, cols: n
             setTimeout(step, 100); // Small delay between propagation steps
         };
 
-        step();
-
-    }, [rows, cols]);
-
-    const animateMove = useCallback((row: number, col: number, playerColor: PlayerColor) => {
-        if (!visualBoard) return;
-
-        setIsAnimating(true);
-
-        // Play Pop Sound
-        soundManager.playPop();
-
-        // Apply initial move locally
-        const newBoard = JSON.parse(JSON.stringify(visualBoard));
-
-        // Defensive check
-        if (!newBoard[row] || !newBoard[row][col]) return;
-
         newBoard[row][col].count++;
         newBoard[row][col].owner = playerColor;
 
