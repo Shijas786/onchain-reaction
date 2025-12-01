@@ -93,11 +93,30 @@ function OnlineGameContent() {
 
   // Handle cell click
   const handleCellClick = async (row: number, col: number) => {
-    if (!isMyTurn || lobby?.status !== "live") return;
+    console.log('[OnlineGame] Cell clicked:', { row, col, isMyTurn, lobbyStatus: lobby?.status, gameStateExists: !!gameState, isAnimating: gameState?.isAnimating });
+    
+    if (lobby?.status !== "live") {
+      console.warn('[OnlineGame] Cannot move: Game not live', lobby?.status);
+      return;
+    }
+    
+    if (!isMyTurn) {
+      console.warn('[OnlineGame] Cannot move: Not your turn', { isMyTurn, currentTurnPlayer: currentTurnPlayer?.name });
+      return;
+    }
 
+    if (gameState?.isAnimating) {
+      console.warn('[OnlineGame] Cannot move: Animation in progress');
+      return;
+    }
+
+    console.log('[OnlineGame] Attempting to make move...');
     const success = await makeMove(row, col);
     if (!success) {
-      console.error("Failed to make move");
+      console.error("[OnlineGame] Failed to make move");
+      alert("Failed to make move. Please try again.");
+    } else {
+      console.log('[OnlineGame] Move initiated successfully');
     }
   };
 
@@ -234,6 +253,16 @@ function OnlineGameContent() {
           >
             <span className="text-emerald-400 font-bold">Your turn! Tap a cell to place an orb</span>
           </motion.div>
+        )}
+        
+        {/* Debug info - remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="text-xs text-slate-400 space-y-1 p-2 bg-black/30 rounded">
+            <div>Status: {lobby?.status} | isMyTurn: {String(isMyTurn)}</div>
+            <div>GameState: {gameState ? 'exists' : 'missing'} | Animating: {String(gameState?.isAnimating)}</div>
+            <div>Current Turn Player: {currentTurnPlayer?.name || 'none'} | Identity: {identity?.substring(0, 8) || 'none'}</div>
+            <div>Alive Players: {alivePlayers?.length || 0} | Current Index: {gameState?.currentPlayerIndex ?? 'N/A'}</div>
+          </div>
         )}
       </div>
 

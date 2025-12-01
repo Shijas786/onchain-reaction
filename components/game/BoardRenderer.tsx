@@ -465,13 +465,22 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     }, [board, drawOrbGroup, drawOrbShape, rows, cols, cellSize, canvasWidth, canvasHeight]);
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (animating) return;
+        console.log('[BoardRenderer] Canvas clicked', { animating });
+        
+        // Don't block clicks - let the game page handle validation
+        // if (animating) return;
 
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas) {
+            console.warn('[BoardRenderer] Canvas ref not available');
+            return;
+        }
 
         const rect = canvas.getBoundingClientRect();
-        if (!rect) return;
+        if (!rect) {
+            console.warn('[BoardRenderer] Canvas rect not available');
+            return;
+        }
 
         // Get click position relative to canvas
         const x = e.clientX - rect.left;
@@ -497,9 +506,14 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         const c = Math.floor(worldPos.x / cellSize + cols / 2);
         const r = Math.floor(worldPos.y / cellSize + rows / 2);
 
+        console.log('[BoardRenderer] Calculated cell:', { r, c, rows, cols, worldPos, cellSize });
+
         // Validate bounds
         if (r >= 0 && r < rows && c >= 0 && c < cols) {
+            console.log('[BoardRenderer] Calling onCellClick for valid cell:', { r, c });
             onCellClick(r, c);
+        } else {
+            console.warn('[BoardRenderer] Click outside bounds:', { r, c, rows, cols });
         }
     };
 

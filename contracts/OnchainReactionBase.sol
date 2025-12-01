@@ -58,6 +58,8 @@ contract OnchainReaction is Ownable {
     event MatchStarted(uint256 indexed matchId);
     event MatchFinished(uint256 indexed matchId, address winner);
     event PrizeClaimed(uint256 indexed matchId, uint256 amount);
+    event MatchCancelled(uint256 indexed matchId);
+    event RefundClaimed(uint256 indexed matchId, address indexed player, uint256 amount);
 
     constructor(address _feeRecipient) Ownable(msg.sender) {
         require(_feeRecipient != address(0), "Invalid fee recipient");
@@ -193,6 +195,70 @@ contract OnchainReaction is Ownable {
         IERC20(m.token).safeTransfer(msg.sender, prize);
 
         emit PrizeClaimed(id, prize);
+    }
+
+    // ------------------------
+    // REFUNDS
+    // ------------------------
+    /// Claim refund if match expired before starting (status still Pending)
+    function claimExpiredRefund(uint256 id) external noReentrant {
+        Match storage m = matches[id];
+        require(m.status == MatchStatus.Pending, "Match started");
+        require(block.timestamp >= m.expiresAt, "Not expired");
+        require(isPlayerInMatch[id][msg.sender], "Not in match");
+
+        // Remove player
+        isPlayerInMatch[id][msg.sender] = false;
+        m.prizePool -= m.entryFee;
+
+        // Remove from players array
+        address[] storage arr = matchPlayers[id];
+        for (uint256 i; i < arr.length; i++) {
+            if (arr[i] == msg.sender) {
+                arr[i] = arr[arr.length - 1];
+                arr.pop();
+                break;
+            }
+        }
+
+        // Refund
+        IERC20(m.token).safeTransfer(msg.sender, m.entryFee);
+
+        emit RefundClaimed(id, msg.sender, m.entryFee);
+
+        // Cancel match if no players left
+        if (matchPlayers[id].length == 0) {
+            m.status = MatchStatus.Cancelled;
+            emit MatchCancelled(id);
+        }
+    }
+
+    /// Emergency cancel match (only owner/oracle) - refunds all players
+    function emergencyCancelMatch(uint256 id) external noReentrant {
+        Match storage m = matches[id];
+        require(msg.sender == oracle || msg.sender == owner(), "Not authorized");
+        require(m.status == MatchStatus.Pending || m.status == MatchStatus.Live, "Cannot cancel");
+        require(matchPlayers[id].length > 0, "No players");
+
+        address[] memory players = matchPlayers[id];
+        uint256 refundAmount = m.entryFee;
+        
+        // Cancel match
+        m.status = MatchStatus.Cancelled;
+        
+        // Refund all players
+        for (uint256 i; i < players.length; i++) {
+            if (isPlayerInMatch[id][players[i]]) {
+                isPlayerInMatch[id][players[i]] = false;
+                IERC20(m.token).safeTransfer(players[i], refundAmount);
+                emit RefundClaimed(id, players[i], refundAmount);
+            }
+        }
+
+        // Clear prize pool
+        m.prizePool = 0;
+
+        emit MatchCancelled(id);
     }
 
     // ------------------------
