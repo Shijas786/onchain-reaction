@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
-import { formatUSDC, getChainName } from "@/lib/contracts";
+import { formatUSDC, getChainName, formatTokenAmount } from "@/lib/contracts";
 
 interface Prize {
   id: string;
@@ -26,6 +26,21 @@ export function ClaimPrizeButton({ prize, onSuccess }: ClaimPrizeButtonProps) {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
   });
+
+  // Fetch match details to get token address
+  const { data: matchData } = useReadContract({
+    address: prize.arenaAddress as `0x${string}`,
+    abi: ChainOrbArenaAbi,
+    functionName: "matches",
+    args: [BigInt(prize.matchId)],
+    chainId: prize.chainId,
+  });
+
+  // Determine token info
+  const tokenAddress = matchData ? (matchData as any)[1] : undefined; // matches returns struct, index 1 is token
+  const isJesse = tokenAddress?.toLowerCase() === "0x50f88fe97f72cd3e75b9eb4f747f59bceba80d59";
+  const decimals = isJesse ? 18 : 6;
+  const symbol = isJesse ? "JESSE" : "USDC";
 
   async function handleClaim() {
     setError(null);
@@ -77,7 +92,7 @@ export function ClaimPrizeButton({ prize, onSuccess }: ClaimPrizeButtonProps) {
       >
         {isPending && "Confirm..."}
         {isConfirming && "Claiming..."}
-        {!isPending && !isConfirming && `Claim ${formatUSDC(netPrize.toString())} USDC`}
+        {!isPending && !isConfirming && `Claim ${formatTokenAmount(netPrize, decimals)} ${symbol}`}
       </button>
       {error && (
         <span className="text-[10px] text-red-500">{error}</span>
@@ -93,6 +108,26 @@ interface PrizeCardProps {
 }
 
 export function PrizeCard({ prize, onClaimed }: PrizeCardProps) {
+  // Fetch match details to get token address
+  const { data: matchData } = useReadContract({
+    address: prize.arenaAddress as `0x${string}`,
+    abi: ChainOrbArenaAbi,
+    functionName: "matches",
+    args: [BigInt(prize.matchId)],
+    chainId: prize.chainId,
+  });
+
+  // Determine token info
+  const tokenAddress = matchData ? (matchData as any)[1] : undefined;
+  const isJesse = tokenAddress?.toLowerCase() === "0x50f88fe97f72cd3e75b9eb4f747f59bceba80d59";
+  const decimals = isJesse ? 18 : 6;
+  const symbol = isJesse ? "JESSE" : "USDC";
+
+  // Calculate net prize
+  const prizePoolBigInt = BigInt(prize.prizePool);
+  const fee = (prizePoolBigInt * BigInt(50)) / BigInt(10000);
+  const netPrize = prizePoolBigInt - fee;
+
   return (
     <div className="rounded-2xl border border-slate-200 p-4 flex items-center justify-between bg-gradient-to-r from-white to-slate-50 shadow-sm">
       <div className="space-y-1">
@@ -108,10 +143,10 @@ export function PrizeCard({ prize, onClaimed }: PrizeCardProps) {
           </span>
           <div className="flex flex-col gap-0.5">
             <span className="text-xs text-slate-500">
-              Prize Pool: <span className="font-bold text-emerald-600">${formatUSDC(prize.prizePool)} USDC</span>
+              Prize Pool: <span className="font-bold text-emerald-600">{formatTokenAmount(prize.prizePool, decimals)} {symbol}</span>
             </span>
             <span className="text-[10px] text-slate-400">
-              After 0.5% fee: <span className="font-bold text-emerald-700">${formatUSDC((BigInt(prize.prizePool) - (BigInt(prize.prizePool) * BigInt(50) / BigInt(10000))).toString())} USDC</span>
+              After 0.5% fee: <span className="font-bold text-emerald-700">{formatTokenAmount(netPrize, decimals)} {symbol}</span>
             </span>
           </div>
         </div>
@@ -120,4 +155,6 @@ export function PrizeCard({ prize, onClaimed }: PrizeCardProps) {
     </div>
   );
 }
+
+
 
