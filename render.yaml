@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: oracle-backend
+    env: node
+    rootDirectory: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ORACLE_PRIVATE_KEY
+        sync: false
+      - key: RPC_URL_BASE
+        sync: false
+      - key: RPC_URL_ARBITRUM
+        sync: false
