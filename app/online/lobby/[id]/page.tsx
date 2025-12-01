@@ -54,6 +54,7 @@ function LobbyContent() {
     players: spacetimePlayers,
     isHost: isSpacetimeHost,
     startGame: startSpacetimeGame,
+    gameState: spacetimeGameState,
   } = useLobby(roomCode);
 
   // Use values from SpacetimeDB lobby if available, otherwise from URL params
@@ -179,6 +180,26 @@ function LobbyContent() {
     }
   }, [isPlayerInMatch]);
 
+  // Watch for game start - redirect all players when status becomes "live"
+  useEffect(() => {
+    // Check SpacetimeDB lobby status (source of truth for game start)
+    const lobbyStatus = spacetimeLobby?.status;
+    
+    // Check if current user is in the SpacetimeDB players list
+    const isPlayerInSpacetimeLobby = address && spacetimePlayers?.some(
+      p => p.address?.toLowerCase() === address.toLowerCase()
+    );
+    
+    // Also check if gameState exists (indicates game has actually started)
+    const hasGameState = !!spacetimeGameState;
+    
+    // Redirect when lobby status is "live" OR gameState exists, and player is in the lobby
+    if ((lobbyStatus === "live" || hasGameState) && (hasJoined || isPlayerInSpacetimeLobby)) {
+      console.log('[LobbyPage] Game started! Redirecting player to game page...', { lobbyStatus, hasGameState, hasJoined, isPlayerInSpacetimeLobby });
+      router.push(`/online/game/${roomCode}?chainId=${chainId}&arena=${arenaAddress}`);
+    }
+  }, [spacetimeLobby?.status, spacetimeGameState, hasJoined, address, spacetimePlayers, roomCode, chainId, arenaAddress, router]);
+
   // Poll for updates
   useEffect(() => {
     const interval = setInterval(() => {
@@ -223,7 +244,9 @@ function LobbyContent() {
   const maxPlayers = match?.maxPlayers || 4;
   const entryFee = match?.entryFee ? formatTokenAmount(match.entryFee, tokenDecimals) : "...";
   const prizePool = match?.prizePool ? formatTokenAmount(match.prizePool, tokenDecimals) : "0";
-  const statusText = match?.status === 0 ? "Waiting" : match?.status === 1 ? "Live" : "Finished";
+  // Use SpacetimeDB lobby status if available (source of truth), otherwise fallback to contract status
+  const lobbyStatus = spacetimeLobby?.status || (match?.status === 0 ? "waiting" : match?.status === 1 ? "live" : "finished");
+  const statusText = lobbyStatus === "waiting" ? "Waiting" : lobbyStatus === "live" ? "Live" : "Finished";
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8 relative overflow-hidden">
