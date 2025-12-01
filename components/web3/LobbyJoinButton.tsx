@@ -168,6 +168,12 @@ export function LobbyJoinButton({
   async function handleJoin() {
     setError(null);
 
+    // Validate matchId
+    if (!matchId || matchId < 0 || isNaN(matchId)) {
+      setError("Invalid match ID. Please refresh the page.");
+      return;
+    }
+
     // Switch chain if needed
     if (connectedChainId !== chainId) {
       try {

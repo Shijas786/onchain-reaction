@@ -36,17 +36,13 @@ function LobbyContent() {
 
   // Only try to parse matchId if it's explicitly provided or if roomCode looks numeric
   // Otherwise default to -1 to indicate invalid/loading state
-  const matchId = matchIdParam
+  const urlMatchId = matchIdParam
     ? parseInt(matchIdParam)
     : /^\d+$/.test(roomCode) ? parseInt(roomCode) : -1;
 
   const isHost = searchParams.get("host") === "true";
   const chainIdParam = searchParams.get("chainId");
   const arenaParam = searchParams.get("arena");
-
-  // Default to Base if not specified
-  const chainId = chainIdParam ? parseInt(chainIdParam) : CHAIN_IDS.BASE;
-  const arenaAddress = (arenaParam as `0x${string}`) || ARENA_ADDRESSES[chainId];
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [hasJoined, setHasJoined] = useState(false);
@@ -59,6 +55,17 @@ function LobbyContent() {
     isHost: isSpacetimeHost,
     startGame: startSpacetimeGame,
   } = useLobby(roomCode);
+
+  // Use values from SpacetimeDB lobby if available, otherwise from URL params
+  const chainId = spacetimeLobby?.chainId || (chainIdParam ? parseInt(chainIdParam) : CHAIN_IDS.BASE);
+  const arenaAddress = (spacetimeLobby?.arenaAddress as `0x${string}`) || (arenaParam as `0x${string}`) || ARENA_ADDRESSES[chainId];
+  
+  // Use matchId from SpacetimeDB lobby if available, otherwise from URL
+  const matchId = spacetimeLobby?.matchId 
+    ? Number(spacetimeLobby.matchId) 
+    : urlMatchId !== -1 
+      ? urlMatchId 
+      : -1;
 
   // Read match info from contract
   const { data: matchInfo, refetch: refetchMatch } = useReadContract({
@@ -387,17 +394,19 @@ function LobbyContent() {
             )
           ) : (
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 w-full max-w-sm">
-              <LobbyJoinButton
-                chainId={chainId}
-                arenaAddress={arenaAddress}
-                matchId={matchId}
-                entryFee={entryFee}
-                lobbyId={roomCode}
-                onSuccess={handleJoinSuccess}
-                tokenAddress={match?.token}
-                tokenSymbol={tokenSymbol}
-                tokenDecimals={tokenDecimals}
-              />
+              {matchId !== -1 && (
+                <LobbyJoinButton
+                  chainId={chainId}
+                  arenaAddress={arenaAddress}
+                  matchId={matchId}
+                  entryFee={entryFee}
+                  lobbyId={roomCode}
+                  onSuccess={handleJoinSuccess}
+                  tokenAddress={match?.token}
+                  tokenSymbol={tokenSymbol}
+                  tokenDecimals={tokenDecimals}
+                />
+              )}
             </div>
           )}
 
