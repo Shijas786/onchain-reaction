@@ -171,12 +171,13 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     setIsCreating(true);
 
     try {
-      // Base USDC requires resetting allowance to 0 before setting new approval
+      // Base USDC requires resetting allowance to 0 before setting new approval if existing allowance doesn't match
       const currentAllowance = safeBigInt(allowance);
       const hasExistingAllowance = currentAllowance !== null && currentAllowance > BigInt(0);
+      const allowanceMismatch = hasExistingAllowance && currentAllowance !== entryFeeWei;
 
-      // For Base, always reset existing allowance to 0 first (required by Base USDC)
-      if (selectedChain === CHAIN_IDS.BASE && hasExistingAllowance) {
+      // For Base, reset existing allowance to 0 first if it doesn't match (required by Base USDC)
+      if (selectedChain === CHAIN_IDS.BASE && allowanceMismatch) {
         try {
           const resetHash = await writeContractAsync({
             address: tokenAddress,
@@ -194,14 +195,12 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         }
       }
 
-      // Use maximum approval (type(uint256).max) - standard pattern for better UX
-      const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
-
+      // Approve only the exact amount needed
       const hash = await writeContractAsync({
         address: tokenAddress,
         abi: ERC20Abi,
         functionName: "approve",
-        args: [arenaAddress, maxApproval],
+        args: [arenaAddress, entryFeeWei],
         chainId: selectedChain,
       });
       setTxHash(hash);
@@ -608,7 +607,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         >
           {isPending && "Confirm in wallet..."}
           {isConfirming && `Approving ${selectedToken}...`}
-          {!isPending && !isConfirming && `Approve ${selectedToken} (Max Amount)`}
+          {!isPending && !isConfirming && `Approve ${feeToUse} ${selectedToken}`}
         </button>
       )}
 
