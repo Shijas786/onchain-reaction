@@ -61,12 +61,12 @@ function LobbyContent() {
   // Use values from SpacetimeDB lobby if available, otherwise from URL params
   const chainId = spacetimeLobby?.chainId || (chainIdParam ? parseInt(chainIdParam) : CHAIN_IDS.BASE);
   const arenaAddress = (spacetimeLobby?.arenaAddress as `0x${string}`) || (arenaParam as `0x${string}`) || ARENA_ADDRESSES[chainId];
-  
+
   // Use matchId from SpacetimeDB lobby if available, otherwise from URL
-  const matchId = spacetimeLobby?.matchId 
-    ? Number(spacetimeLobby.matchId) 
-    : urlMatchId !== -1 
-      ? urlMatchId 
+  const matchId = spacetimeLobby?.matchId
+    ? Number(spacetimeLobby.matchId)
+    : urlMatchId !== -1
+      ? urlMatchId
       : -1;
 
   // Read match info from contract
@@ -186,17 +186,17 @@ function LobbyContent() {
   useEffect(() => {
     // Check SpacetimeDB lobby status (source of truth for game start)
     const lobbyStatus = spacetimeLobby?.status;
-    
+
     // Check if current user is in the SpacetimeDB players list
     const isPlayerInSpacetimeLobby = address && spacetimePlayers?.some(
       p => p.address?.toLowerCase() === address.toLowerCase()
     );
-    
+
     // Also check if gameState exists (indicates game has actually started)
     const hasGameState = !!spacetimeGameState;
-    
-    // Redirect when lobby status is "live" OR gameState exists, and player is in the lobby
-    if ((lobbyStatus === "live" || hasGameState) && (hasJoined || isPlayerInSpacetimeLobby)) {
+
+    // Redirect when lobby status is "live" and player is in the lobby
+    if (lobbyStatus === "live" && (hasJoined || isPlayerInSpacetimeLobby)) {
       console.log('[LobbyPage] Game started! Redirecting player to game page...', { lobbyStatus, hasGameState, hasJoined, isPlayerInSpacetimeLobby });
       router.push(`/online/game/${roomCode}?chainId=${chainId}&arena=${arenaAddress}`);
     }
@@ -373,11 +373,10 @@ function LobbyContent() {
                     {player.farcasterHandle}
                   </div>
                   {player.hasDeposited !== undefined && (
-                    <div className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                      player.hasDeposited 
-                        ? "bg-emerald-100 text-emerald-700" 
+                    <div className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${player.hasDeposited
+                        ? "bg-emerald-100 text-emerald-700"
                         : "bg-amber-100 text-amber-700"
-                    }`}>
+                      }`}>
                       {player.hasDeposited ? "DEPOSITED" : "PENDING"}
                     </div>
                   )}
