@@ -207,6 +207,7 @@ export async function pollMatches() {
 }
 
 // Start polling if run directly
-if (process.argv[1] === import.meta.url) {
+import { fileURLToPath } from 'url';
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
     pollMatches();
 }
