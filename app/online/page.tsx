@@ -68,21 +68,19 @@ export default function OnlineMenu() {
           <div className="flex border-b border-slate-200">
             <button
               onClick={() => setActiveTab("join")}
-              className={`flex-1 px-6 py-4 font-bold text-sm transition-all ${
-                activeTab === "join"
+              className={`flex-1 px-6 py-4 font-bold text-sm transition-all ${activeTab === "join"
                   ? "bg-white text-blue-600 border-b-2 border-blue-500"
                   : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-              }`}
+                }`}
             >
               Join Match
             </button>
             <button
               onClick={() => setActiveTab("create")}
-              className={`flex-1 px-6 py-4 font-bold text-sm transition-all ${
-                activeTab === "create"
+              className={`flex-1 px-6 py-4 font-bold text-sm transition-all ${activeTab === "create"
                   ? "bg-white text-purple-600 border-b-2 border-purple-500"
                   : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-              }`}
+                }`}
             >
               Create Match
             </button>
@@ -119,7 +117,7 @@ export default function OnlineMenu() {
                       Join
                     </Button>
                   </div>
-                  
+
                   {!isConnected && (
                     <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg text-center">
                       Connect your wallet to deposit USDC and join matches
@@ -165,7 +163,7 @@ export default function OnlineMenu() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => router.back()}
+            onClick={() => router.push("/")}
             className="bg-white/80 text-slate-600 hover:bg-white shadow-none"
           >
             Back
