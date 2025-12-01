@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient, useReadContract, useSwitchChain } from "wagmi";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
 import ERC20Abi from "@/abi/ERC20.json";
-import { ARENA_ADDRESSES, parseUSDC, ENTRY_FEE_OPTIONS, MAX_PLAYERS_OPTIONS, getChainName, CHAIN_IDS, USDC_ADDRESSES } from "@/lib/contracts";
+import { ARENA_ADDRESSES, parseUSDC, ENTRY_FEE_OPTIONS, MAX_PLAYERS_OPTIONS, getChainName, CHAIN_IDS, USDC_ADDRESSES, TOKENS, parseTokenAmount, formatTokenAmount } from "@/lib/contracts";
 import { decodeEventLog } from "viem";
 import { generateRoomCode, formatRoomCode } from "@/lib/roomCode";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
 
   const [selectedChain, setSelectedChain] = useState<number>(CHAIN_IDS.BASE);
+  const [selectedToken, setSelectedToken] = useState<keyof typeof TOKENS>('USDC');
   const [entryFee, setEntryFee] = useState<string>("0.01");
   const [customEntryFee, setCustomEntryFee] = useState<string>("");
   const [useCustomFee, setUseCustomFee] = useState<boolean>(false);
@@ -34,7 +35,8 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
   const [createdMatchId, setCreatedMatchId] = useState<number | null>(null);
 
   const arenaAddress = ARENA_ADDRESSES[selectedChain];
-  const usdcAddress = USDC_ADDRESSES[selectedChain];
+  const tokenConfig = TOKENS[selectedToken];
+  const tokenAddress = tokenConfig.addresses[selectedChain as keyof typeof tokenConfig.addresses];
   const feeToUse = useCustomFee ? customEntryFee : entryFee;
 
   // Helper function to safely parse entry fee
@@ -42,7 +44,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     if (!feeToUse) return BigInt(0);
     const num = parseFloat(feeToUse);
     if (isNaN(num) || !isFinite(num) || num <= 0) return BigInt(0);
-    return parseUSDC(feeToUse);
+    return parseTokenAmount(feeToUse, tokenConfig.decimals);
   };
 
   // Helper to safely convert to BigInt
@@ -77,7 +79,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
 
   // Check current USDC allowance
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: usdcAddress,
+    address: tokenAddress,
     abi: ERC20Abi,
     functionName: "allowance",
     args: [address, arenaAddress],
@@ -89,7 +91,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
 
   // Check USDC balance
   const { data: balance } = useReadContract({
-    address: usdcAddress,
+    address: tokenAddress,
     abi: ERC20Abi,
     functionName: "balanceOf",
     args: [address],
@@ -177,7 +179,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       if (selectedChain === CHAIN_IDS.BASE && hasExistingAllowance) {
         try {
           const resetHash = await writeContractAsync({
-            address: usdcAddress,
+            address: tokenAddress,
             abi: ERC20Abi,
             functionName: "approve",
             args: [arenaAddress, BigInt(0)],
@@ -196,7 +198,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
 
       const hash = await writeContractAsync({
-        address: usdcAddress,
+        address: tokenAddress,
         abi: ERC20Abi,
         functionName: "approve",
         args: [arenaAddress, maxApproval],
@@ -219,9 +221,9 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       if (isUserRejection) {
         setError("Transaction was cancelled. Please try again when ready.");
       } else if (isSimulationError && selectedChain === CHAIN_IDS.BASE) {
-        setError("Base transaction failed. Please check your USDC balance and try resetting allowance to 0 if needed.");
+        setError(`Base transaction failed. Please check your ${selectedToken} balance and try resetting allowance to 0 if needed.`);
       } else if (isSimulationError) {
-        setError("Approval failed. Please check your USDC balance and try again.");
+        setError(`Approval failed. Please check your ${selectedToken} balance and try again.`);
       } else {
         setError(e?.shortMessage || e?.message || "Approval failed. Please try again.");
       }
@@ -255,7 +257,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     }
 
     if (feeNum > 10000) {
-      setError("Entry fee cannot exceed $10,000 USDC");
+      setError(`Entry fee cannot exceed 10,000 ${selectedToken}`);
       return;
     }
 
@@ -276,7 +278,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       try {
         const currentAllowance = BigInt(allowance as string);
         if (currentAllowance < entryFeeWei) {
-          setError("Insufficient USDC allowance. Please approve first.");
+          setError(`Insufficient ${selectedToken} allowance. Please approve first.`);
           setStep('approve');
           return;
         }
@@ -300,7 +302,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         // or import formatUSDC if available. It is available in imports!
         // But wait, imports are at top of file.
         // Let's assume formatUSDC is imported or we just show the values.
-        setError(`Insufficient USDC balance. Need ${feeToUse} USDC.`);
+        setError(`Insufficient ${selectedToken} balance. Need ${feeToUse} ${selectedToken}.`);
         return;
       }
     } catch (err) {
@@ -315,7 +317,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         address: arenaAddress,
         abi: ChainOrbArenaAbi,
         functionName: "createMatch",
-        args: [usdcAddress, entryFeeWei, BigInt(maxPlayers)],
+        args: [tokenAddress, entryFeeWei, BigInt(maxPlayers)],
         chainId: selectedChain,
       });
 
@@ -355,7 +357,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             const conn = getDbConnection();
             if (conn) {
               const arenaAddress = ARENA_ADDRESSES[selectedChain];
-              const entryFeeWei = parseUSDC(useCustomFee ? customEntryFee : entryFee);
+              const entryFeeWei = parseTokenAmount(useCustomFee ? customEntryFee : entryFee, tokenConfig.decimals);
 
               conn.reducers.createLobby({
                 chainId: selectedChain,
@@ -405,10 +407,10 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       if (isUserRejection) {
         setError("Transaction was cancelled. Please try again when ready.");
       } else if (isAllowanceError) {
-        setError("USDC approval required. Please approve USDC first.");
+        setError(`${selectedToken} approval required. Please approve ${selectedToken} first.`);
         setStep('approve');
       } else if (isTokenError) {
-        setError("This token is not supported. Please use USDC.");
+        setError(`This token is not supported. Please use ${selectedToken}.`);
       } else if (isValidationError) {
         setError("Invalid match parameters. Please check entry fee (must be > 0) and max players (2-8).");
       } else {
@@ -452,9 +454,30 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         </div>
       </div>
 
+      {/* Token Selection (Base Only) */}
+      {selectedChain === CHAIN_IDS.BASE && (
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-700">Token</label>
+          <div className="flex gap-2">
+            {(Object.keys(TOKENS) as Array<keyof typeof TOKENS>).map((token) => (
+              <button
+                key={token}
+                onClick={() => setSelectedToken(token)}
+                className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all ${selectedToken === token
+                  ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+              >
+                ${token}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Entry Fee */}
       <div className="space-y-2">
-        <label className="text-sm font-bold text-slate-700">Entry Fee (USDC)</label>
+        <label className="text-sm font-bold text-slate-700">Entry Fee ({selectedToken})</label>
         <div className="grid grid-cols-4 gap-2">
           {ENTRY_FEE_OPTIONS.map((option) => (
             <button
@@ -469,7 +492,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50'
                 }`}
             >
-              {option.label}
+              ${option.label} {selectedToken}
             </button>
           ))}
         </div>
@@ -503,7 +526,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
                 disabled={isProcessing}
                 className="w-full bg-white border-2 border-blue-300 rounded-xl px-4 py-3 font-bold text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 outline-none disabled:opacity-50"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">USDC</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{selectedToken}</span>
             </div>
           )}
         </div>
@@ -537,13 +560,13 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
         <div className="flex justify-between text-sm">
           <span className="text-slate-500">Entry Fee</span>
           <span className="font-bold text-slate-700">
-            ${useCustomFee ? (customEntryFee || "0") : entryFee} USDC
+            {useCustomFee ? (customEntryFee || "0") : entryFee} {selectedToken}
           </span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-slate-500">Max Prize Pool</span>
           <span className="font-bold text-emerald-600">
-            ${(useCustomFee ? (parseFloat(customEntryFee) || 0) : Number(entryFee)) * maxPlayers} USDC
+            {(useCustomFee ? (parseFloat(customEntryFee) || 0) : Number(entryFee)) * maxPlayers} {selectedToken}
           </span>
         </div>
       </div>
@@ -555,10 +578,10 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
             disabled
             className="w-full px-6 py-4 rounded-2xl bg-red-100 text-red-600 text-sm font-bold cursor-not-allowed"
           >
-            Insufficient USDC Balance
+            Insufficient {selectedToken} Balance
           </button>
           <p className="text-xs text-slate-500 text-center">
-            Need ${feeToUse} USDC to create match
+            Need {feeToUse} {selectedToken} to create match
           </p>
         </div>
       )}
@@ -567,7 +590,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       {balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && step !== 'check' && (
         <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
           <span className={step === 'approve' ? 'text-blue-600 font-bold' : ''}>
-            1. Approve USDC
+            1. Approve {selectedToken}
           </span>
           <span>→</span>
           <span className={step === 'create' ? 'text-blue-600 font-bold' : ''}>
@@ -584,8 +607,8 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
           className="w-full px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold shadow-lg shadow-blue-500/25 disabled:opacity-60 transition-all hover:shadow-blue-500/40"
         >
           {isPending && "Confirm in wallet..."}
-          {isConfirming && "Approving USDC..."}
-          {!isPending && !isConfirming && "Approve USDC (Max Amount)"}
+          {isConfirming && `Approving ${selectedToken}...`}
+          {!isPending && !isConfirming && `Approve ${selectedToken} (Max Amount)`}
         </button>
       )}
 
@@ -606,7 +629,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       {step === 'create' && (allowance === undefined || !safeCompare(allowance, entryFeeWei, 'gte')) && balance !== undefined && entryFeeWei > BigInt(0) && safeCompare(balance, entryFeeWei, 'gte') && (
         <div className="text-center p-3 bg-amber-50 rounded-xl border border-amber-200">
           <p className="text-xs text-amber-700">
-            Checking USDC approval...
+            Checking {selectedToken} approval...
           </p>
         </div>
       )}

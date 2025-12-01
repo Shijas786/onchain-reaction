@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain, usePublicClient } from "wagmi";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
 import ERC20Abi from "@/abi/ERC20.json";
-import { USDC_ADDRESSES, parseUSDC } from "@/lib/contracts";
+import { USDC_ADDRESSES, parseUSDC, parseTokenAmount } from "@/lib/contracts";
 import { useLobby } from "@/hooks/useSpacetimeDB";
 import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 
@@ -15,6 +15,9 @@ interface LobbyJoinButtonProps {
   entryFee: string; // Human readable e.g. "5" for $5 USDC
   lobbyId?: string; // Room code for SpacetimeDB lobby
   onSuccess?: () => void;
+  tokenAddress?: `0x${string}`;
+  tokenSymbol?: string;
+  tokenDecimals?: number;
 }
 
 export function LobbyJoinButton({
@@ -23,7 +26,10 @@ export function LobbyJoinButton({
   matchId,
   entryFee,
   lobbyId,
-  onSuccess
+  onSuccess,
+  tokenAddress,
+  tokenSymbol = 'USDC',
+  tokenDecimals = 6
 }: LobbyJoinButtonProps) {
   const { address, chainId: connectedChainId } = useAccount();
   const { switchChainAsync } = useSwitchChain();
@@ -35,11 +41,12 @@ export function LobbyJoinButton({
   const [error, setError] = useState<string | null>(null);
 
   const usdcAddress = USDC_ADDRESSES[chainId];
-  const entryFeeWei = parseUSDC(entryFee);
+  const targetTokenAddress = tokenAddress || usdcAddress;
+  const entryFeeWei = parseTokenAmount(entryFee, tokenDecimals);
 
   // Check current allowance
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: usdcAddress,
+    address: targetTokenAddress,
     abi: ERC20Abi,
     functionName: "allowance",
     args: [address, arenaAddress],
@@ -48,7 +55,7 @@ export function LobbyJoinButton({
 
   // Check USDC balance
   const { data: balance } = useReadContract({
-    address: usdcAddress,
+    address: targetTokenAddress,
     abi: ERC20Abi,
     functionName: "balanceOf",
     args: [address],
@@ -128,7 +135,7 @@ export function LobbyJoinButton({
           const currentAllowance = BigInt(allowance ? String(allowance) : "0");
           if (currentAllowance > BigInt(0)) {
             const resetHash = await writeContractAsync({
-              address: usdcAddress,
+              address: targetTokenAddress,
               abi: ERC20Abi,
               functionName: "approve",
               args: [arenaAddress, BigInt(0)],
@@ -145,7 +152,7 @@ export function LobbyJoinButton({
       }
 
       const hash = await writeContractAsync({
-        address: usdcAddress,
+        address: targetTokenAddress,
         abi: ERC20Abi,
         functionName: "approve",
         args: [arenaAddress, entryFeeWei],
@@ -205,10 +212,10 @@ export function LobbyJoinButton({
           disabled
           className="px-6 py-3 rounded-2xl bg-red-100 text-red-600 text-sm font-bold cursor-not-allowed"
         >
-          Insufficient USDC Balance
+          Insufficient {tokenSymbol} Balance
         </button>
         <p className="text-xs text-slate-500 text-center">
-          Need ${entryFee} USDC to join
+          Need {entryFee} {tokenSymbol} to join
         </p>
       </div>
     );
@@ -232,7 +239,7 @@ export function LobbyJoinButton({
       {/* Step indicator */}
       <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
         <span className={step === 'approve' ? 'text-blue-600 font-bold' : ''}>
-          1. Approve USDC
+          1. Approve {tokenSymbol}
         </span>
         <span>→</span>
         <span className={step === 'join' ? 'text-blue-600 font-bold' : ''}>
@@ -247,8 +254,8 @@ export function LobbyJoinButton({
           className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/25 disabled:opacity-60 transition-all hover:shadow-blue-500/40"
         >
           {isPending && "Confirm in wallet..."}
-          {isConfirming && "Approving USDC..."}
-          {!isPending && !isConfirming && `Approve $${entryFee} USDC`}
+          {isConfirming && `Approving ${tokenSymbol}...`}
+          {!isPending && !isConfirming && `Approve ${entryFee} ${tokenSymbol}`}
         </button>
       )}
 
@@ -260,7 +267,7 @@ export function LobbyJoinButton({
         >
           {isPending && "Confirm in wallet..."}
           {isConfirming && "Joining lobby..."}
-          {!isPending && !isConfirming && `Join Match ($${entryFee} USDC)`}
+          {!isPending && !isConfirming && `Join Match (${entryFee} ${tokenSymbol})`}
         </button>
       )}
 

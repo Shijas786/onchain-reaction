@@ -39,30 +39,60 @@ export const getChainName = (chainId: number): string => {
   }
 }
 
-// USDC has 6 decimals
+// Token decimals
 export const USDC_DECIMALS = 6
+export const JESSE_DECIMALS = 18
 
-// Convert human readable USDC amount to wei (6 decimals)
-export const parseUSDC = (amount: string | number): bigint => {
+// Token configuration
+export const TOKENS = {
+  USDC: {
+    symbol: 'USDC',
+    decimals: USDC_DECIMALS,
+    addresses: USDC_ADDRESSES,
+  },
+  JESSE: {
+    symbol: 'JESSE',
+    decimals: JESSE_DECIMALS,
+    addresses: {
+      [CHAIN_IDS.BASE]: BASE_JESSE,
+    },
+  },
+} as const
+
+// Convert human readable amount to wei
+export const parseTokenAmount = (amount: string | number, decimals: number): bigint => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(num) || !isFinite(num) || num < 0) {
     return BigInt(0)
   }
-  return BigInt(Math.floor(num * 10 ** USDC_DECIMALS))
+  // Handle decimals carefully to avoid precision loss with floats
+  const [integerPart, fractionalPart = ''] = String(num).split('.')
+  const paddedFraction = fractionalPart.padEnd(decimals, '0').slice(0, decimals)
+  return BigInt(`${integerPart}${paddedFraction}`)
 }
 
-// Convert wei to human readable USDC amount
-export const formatUSDC = (amount: bigint | string | number): string => {
+// Convert wei to human readable amount
+export const formatTokenAmount = (amount: bigint | string | number, decimals: number): string => {
   const value = typeof amount === 'bigint' ? amount : BigInt(amount)
-  return (Number(value) / 10 ** USDC_DECIMALS).toFixed(2)
+  const divisor = BigInt(10) ** BigInt(decimals)
+  const integerPart = value / divisor
+  const fractionalPart = value % divisor
+  const paddedFraction = fractionalPart.toString().padStart(decimals, '0')
+  // Remove trailing zeros
+  const formattedFraction = paddedFraction.replace(/0+$/, '')
+  return formattedFraction ? `${integerPart}.${formattedFraction}` : `${integerPart}`
 }
 
-// Default entry fee options in USDC
+// Legacy helpers for backward compatibility (deprecate later)
+export const parseUSDC = (amount: string | number) => parseTokenAmount(amount, USDC_DECIMALS)
+export const formatUSDC = (amount: bigint | string | number) => formatTokenAmount(amount, USDC_DECIMALS)
+
+// Default entry fee options
 export const ENTRY_FEE_OPTIONS = [
-  { label: '$0.01 USDC', value: '0.01' },
-  { label: '$1 USDC', value: '1' },
-  { label: '$5 USDC', value: '5' },
-  { label: '$10 USDC', value: '10' },
+  { label: '0.01', value: '0.01' },
+  { label: '1', value: '1' },
+  { label: '5', value: '5' },
+  { label: '10', value: '10' },
 ]
 
 // Max players range

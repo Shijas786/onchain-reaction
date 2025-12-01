@@ -9,7 +9,7 @@ import { DoodleBackground } from "@/components/ui/DoodleBackground";
 import { LobbyJoinButton } from "@/components/web3/LobbyJoinButton";
 import { motion } from "framer-motion";
 import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
-import { ARENA_ADDRESSES, CHAIN_IDS, getChainName, formatUSDC, parseUSDC } from "@/lib/contracts";
+import { ARENA_ADDRESSES, CHAIN_IDS, getChainName, formatUSDC, parseUSDC, formatTokenAmount, BASE_JESSE } from "@/lib/contracts";
 import { formatRoomCode } from "@/lib/roomCode";
 import { useLobby } from "@/hooks/useSpacetimeDB";
 import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
@@ -100,13 +100,18 @@ function LobbyContent() {
   const match = matchInfo
     ? {
       host: (matchInfo as any)[0] as string,
-      entryFee: (matchInfo as any)[1] as bigint,
-      maxPlayers: Number((matchInfo as any)[2]),
-      prizePool: (matchInfo as any)[3] as bigint,
-      status: Number((matchInfo as any)[4]),
-      winner: (matchInfo as any)[5] as string,
+      token: (matchInfo as any)[1] as `0x${string}`,
+      entryFee: (matchInfo as any)[2] as bigint,
+      maxPlayers: Number((matchInfo as any)[3]),
+      prizePool: (matchInfo as any)[4] as bigint,
+      status: Number((matchInfo as any)[5]),
+      winner: (matchInfo as any)[6] as string,
     }
     : null;
+
+  // Determine token details
+  const tokenSymbol = match?.token?.toLowerCase() === BASE_JESSE.toLowerCase() ? 'JESSE' : 'USDC';
+  const tokenDecimals = tokenSymbol === 'JESSE' ? 18 : 6;
 
   // Create SpacetimeDB lobby if it doesn't exist (for existing matches)
   useEffect(() => {
@@ -209,8 +214,8 @@ function LobbyContent() {
   };
 
   const maxPlayers = match?.maxPlayers || 4;
-  const entryFee = match?.entryFee ? formatUSDC(match.entryFee) : "...";
-  const prizePool = match?.prizePool ? formatUSDC(match.prizePool) : "0";
+  const entryFee = match?.entryFee ? formatTokenAmount(match.entryFee, tokenDecimals) : "...";
+  const prizePool = match?.prizePool ? formatTokenAmount(match.prizePool, tokenDecimals) : "0";
   const statusText = match?.status === 0 ? "Waiting" : match?.status === 1 ? "Live" : "Finished";
 
   return (
@@ -260,11 +265,11 @@ function LobbyContent() {
           <div className="flex items-center justify-between text-white">
             <div>
               <p className="text-emerald-100 text-xs font-medium">Entry Fee</p>
-              <p className="text-2xl font-black">${entryFee} USDC</p>
+              <p className="text-2xl font-black">${entryFee} {tokenSymbol}</p>
             </div>
             <div className="text-right">
               <p className="text-emerald-100 text-xs font-medium">Prize Pool</p>
-              <p className="text-2xl font-black">${prizePool} USDC</p>
+              <p className="text-2xl font-black">${prizePool} {tokenSymbol}</p>
             </div>
           </div>
         </div>
@@ -389,6 +394,9 @@ function LobbyContent() {
                 entryFee={entryFee}
                 lobbyId={roomCode}
                 onSuccess={handleJoinSuccess}
+                tokenAddress={match?.token}
+                tokenSymbol={tokenSymbol}
+                tokenDecimals={tokenDecimals}
               />
             </div>
           )}
