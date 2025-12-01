@@ -22,6 +22,7 @@ interface Player {
   address: string;
   isHost: boolean;
   farcasterHandle?: string;
+  hasDeposited?: boolean;
 }
 
 function LobbyContent() {
@@ -157,6 +158,7 @@ function LobbyContent() {
         address: p.address,
         isHost: p.isHost,
         farcasterHandle: p.farcasterHandle || `${p.address.slice(0, 6)}...${p.address.slice(-4)}`,
+        hasDeposited: p.hasDeposited,
       }));
       setPlayers(playerList);
     } else if (contractPlayers && Array.isArray(contractPlayers)) {
@@ -216,10 +218,10 @@ function LobbyContent() {
       return;
     }
 
-    // Check if all players have deposited
-    const allDeposited = players.every(p => p.hasDeposited);
-    if (!allDeposited) {
-      const undeposited = players.filter(p => !p.hasDeposited).map(p => p.name).join(', ');
+    // Check if all players have deposited (use spacetimePlayers directly for accurate data)
+    const allDeposited = spacetimePlayers?.every(p => p.hasDeposited) ?? false;
+    if (!allDeposited && spacetimePlayers && spacetimePlayers.length > 0) {
+      const undeposited = spacetimePlayers.filter(p => !p.hasDeposited).map(p => p.name).join(', ');
       console.error('Not all players have deposited:', undeposited);
       alert(`Cannot start: Waiting for deposits from: ${undeposited}`);
       return;
@@ -230,7 +232,7 @@ function LobbyContent() {
       // Start game in SpacetimeDB
       if (isSpacetimeConnected && startSpacetimeGame) {
         console.log('[LobbyPage] Starting game in SpacetimeDB...', {
-          players: players.map(p => ({ name: p.name, hasDeposited: p.hasDeposited })),
+          players: spacetimePlayers?.map(p => ({ name: p.name, hasDeposited: p.hasDeposited })) || [],
           lobbyStatus: spacetimeLobby?.status
         });
         const started = await startSpacetimeGame();
