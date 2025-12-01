@@ -58,6 +58,16 @@ export type GameState = {
   lastMoveAt: bigint;
 };
 
+export type GameMove = {
+  id: string;
+  lobbyId: string;
+  moveIndex: number;
+  playerIdentity: Identity;
+  row: number;
+  col: number;
+  timestamp: bigint;
+};
+
 export type Board = { orbs: number; owner: string | null }[][];
 
 export function parseBoard(boardJson: string): Board {
@@ -98,7 +108,7 @@ export function useSpacetimeConnection() {
     try {
       const conn = await connectToSpacetimeDB();
       connectionRef.current = conn;
-      
+
       // Get identity from connection
       const id = conn.identity;
       setIdentity(id?.toHexString() || null);
@@ -143,6 +153,7 @@ export function useLobby(lobbyId: string | null) {
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
+  const [lastMove, setLastMove] = useState<GameMove | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const { connection, isConnected, identity } = useSpacetimeConnection();
@@ -163,7 +174,7 @@ export function useLobby(lobbyId: string | null) {
     const subscription = conn.subscriptionBuilder()
       .onApplied((ctx) => {
         console.log("Subscription applied");
-        
+
         // Load initial data
         const lobbyData = ctx.db.lobby.id.find(lobbyId);
         if (lobbyData) {
@@ -234,13 +245,13 @@ export function useLobby(lobbyId: string | null) {
 
     conn.db.lobbyPlayer.onUpdate((ctx, oldRow, newRow) => {
       if (newRow.lobbyId === lobbyId) {
-        setPlayers(prev => prev.map(p => 
-          p.id === newRow.id 
-            ? { 
-                ...newRow as unknown as LobbyPlayer,
-                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newRow.name)}&background=random`,
-                farcasterHandle: `@${newRow.name.toLowerCase().replace(/\s+/g, '')}`,
-              }
+        setPlayers(prev => prev.map(p =>
+          p.id === newRow.id
+            ? {
+              ...newRow as unknown as LobbyPlayer,
+              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newRow.name)}&background=random`,
+              farcasterHandle: `@${newRow.name.toLowerCase().replace(/\s+/g, '')}`,
+            }
             : p
         ));
       }
@@ -265,6 +276,12 @@ export function useLobby(lobbyId: string | null) {
         const gs = newRow as unknown as GameState;
         setGameState(gs);
         setBoard(parseBoard(gs.boardJson));
+      }
+    });
+
+    conn.db.gameMove.onInsert((ctx, row) => {
+      if (row.lobbyId === lobbyId) {
+        setLastMove(row as unknown as GameMove);
       }
     });
 
@@ -380,13 +397,13 @@ export function useLobby(lobbyId: string | null) {
       const conn = getDbConnection();
       if (!conn || !lobbyId) return false;
 
-    try {
-      conn.reducers.makeMove({ lobbyId, row, col });
-      return true;
-    } catch (err) {
-      console.error("Failed to make move:", err);
-      return false;
-    }
+      try {
+        conn.reducers.makeMove({ lobbyId, row, col });
+        return true;
+      } catch (err) {
+        console.error("Failed to make move:", err);
+        return false;
+      }
     },
     [lobbyId]
   );
@@ -407,17 +424,17 @@ export function useLobby(lobbyId: string | null) {
   // Derived state
   const currentPlayer = players.find((p) => p.identity?.toHexString() === identity);
   const isHost = currentPlayer?.isHost || false;
-  
+
   // Sort players by joined_at to ensure consistent turn order
   const sortedPlayers = [...players].sort((a, b) => {
     const aTime = a.joinedAt ? Number(a.joinedAt) : 0;
     const bTime = b.joinedAt ? Number(b.joinedAt) : 0;
     return aTime - bTime;
   });
-  
+
   const alivePlayers = sortedPlayers.filter((p) => p.isAlive);
   console.log(`[useLobby] Turn calculation: ${alivePlayers.length} alive players, currentPlayerIndex: ${gameState?.currentPlayerIndex || 0}`);
-  
+
   const isMyTurn = gameState
     ? alivePlayers[gameState.currentPlayerIndex % alivePlayers.length]?.identity?.toHexString() === identity
     : false;
@@ -431,6 +448,7 @@ export function useLobby(lobbyId: string | null) {
     players,
     gameState,
     board,
+    lastMove,
     isLoading,
     // Derived
     currentPlayer,

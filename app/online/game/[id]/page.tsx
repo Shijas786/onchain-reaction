@@ -6,6 +6,7 @@ import { useAccount } from "wagmi";
 import { BoardRenderer } from "@/components/game/BoardRenderer";
 import { Button } from "@/components/ui/Button";
 import { useLobby, useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
+import { useVisualBoard } from "@/hooks/useVisualBoard";
 import { formatUSDC } from "@/lib/contracts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Board, Player, PlayerColor as GamePlayerColor } from "@/types/game";
@@ -28,6 +29,7 @@ function OnlineGameContent() {
     players,
     gameState,
     board: spacetimeBoard,
+    lastMove,
     isLoading,
     currentPlayer,
     isHost,
@@ -37,10 +39,6 @@ function OnlineGameContent() {
     makeMove,
     leaveLobby,
   } = useLobby(lobbyId);
-
-  const [explosionQueue, setExplosionQueue] = useState<{ row: number; col: number }[]>([]);
-  const [showWinModal, setShowWinModal] = useState(false);
-  const previousBoardRef = useRef<Board | null>(null);
 
   // Convert SpacetimeDB board to game board format
   const gameBoard = useMemo((): Board => {
@@ -80,47 +78,32 @@ function OnlineGameContent() {
     }));
   }, [players]);
 
-  const [hasTriggeredOracle, setHasTriggeredOracle] = useState(false);
+  // Visual Board State (Handles local animations)
+  const {
+    visualBoard,
+    isAnimating,
+    explosionQueue,
+    clearExplosionQueue,
+    animateMove
+  } = useVisualBoard(gameBoard, gameState?.rows || 9, gameState?.cols || 6);
 
-  // Sound Effects: Detect Explosions
+  const lastProcessedMoveIndex = useRef<number>(-1);
+
+  // Handle incoming moves for animation
   useEffect(() => {
-    if (!previousBoardRef.current || !gameBoard) {
-      previousBoardRef.current = gameBoard;
-      return;
-    }
+    if (lastMove && lastMove.moveIndex > lastProcessedMoveIndex.current) {
+      lastProcessedMoveIndex.current = lastMove.moveIndex;
 
-    const newExplosions: { row: number; col: number }[] = [];
-    const rows = gameBoard.length;
-    const cols = gameBoard[0]?.length || 0;
-
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const prevCell = previousBoardRef.current[r][c];
-        const currCell = gameBoard[r][c];
-        const capacity = getMaxCapacity(r, c, rows, cols);
-
-        // Detect explosion: Cell was at critical mass and now is empty (or significantly reduced)
-        // In SpacetimeDB, we receive the state *after* the move and all chain reactions.
-        // However, if we receive intermediate states (which we might not if it's one transaction),
-        // we might miss the animation frames.
-        // But for sound, we just want to know if something exploded.
-        // If a cell count drops to 0 from a non-zero value, it likely exploded.
-        if (prevCell.count > 0 && currCell.count === 0) {
-          // Check if it was full or near full to be sure it's an explosion and not a bug
-          // Actually, any drop to 0 in this game is an explosion (or capture, but capture usually leaves 1 orb).
-          // Capture: Attacker adds orb, cell count becomes 1 (if it was 1) -> No, capture adds to count.
-          // So count only drops to 0 on explosion.
-          newExplosions.push({ row: r, col: c });
-        }
+      const player = players.find(p => p.identity.toHexString() === lastMove.playerIdentity.toHexString());
+      if (player) {
+        console.log(`[OnlineGame] Animating move: ${player.name} at (${lastMove.row}, ${lastMove.col})`);
+        animateMove(lastMove.row, lastMove.col, player.color as GamePlayerColor);
       }
     }
+  }, [lastMove, players, animateMove]);
 
-    if (newExplosions.length > 0) {
-      setExplosionQueue(prev => [...prev, ...newExplosions]);
-    }
-
-    previousBoardRef.current = gameBoard;
-  }, [gameBoard]);
+  const [showWinModal, setShowWinModal] = useState(false);
+  const [hasTriggeredOracle, setHasTriggeredOracle] = useState(false);
 
 
   // Check for winner and trigger oracle
@@ -152,8 +135,8 @@ function OnlineGameContent() {
 
   // Handle cell click
   const handleCellClick = async (row: number, col: number) => {
-    if (lobby?.status !== "live" || !isMyTurn || gameState?.isAnimating) return;
-    soundManager.playPop();
+    if (lobby?.status !== "live" || !isMyTurn || isAnimating) return;
+    // soundManager.playPop(); // Handled by animateMove
     await makeMove(row, col);
   };
 
@@ -257,13 +240,13 @@ function OnlineGameContent() {
       {/* Game Board */}
       <div className="relative p-0 bg-transparent rounded-none shadow-none border-none">
         <BoardRenderer
-          board={gameBoard}
+          board={visualBoard || gameBoard}
           rows={gameState?.rows || 9}
           cols={gameState?.cols || 6}
           onCellClick={handleCellClick}
-          animating={gameState?.isAnimating || false}
+          animating={isAnimating}
           explosionQueue={explosionQueue}
-          clearExplosionQueue={() => setExplosionQueue([])}
+          clearExplosionQueue={clearExplosionQueue}
         />
       </div>
 
