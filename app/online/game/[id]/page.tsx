@@ -10,6 +10,7 @@ import { formatUSDC } from "@/lib/contracts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Board, Player, PlayerColor as GamePlayerColor } from "@/types/game";
 import { getMaxCapacity } from "@/lib/gameLogic";
+import { soundManager } from "@/lib/sound";
 
 function OnlineGameContent() {
   const params = useParams();
@@ -152,6 +153,7 @@ function OnlineGameContent() {
   // Handle cell click
   const handleCellClick = async (row: number, col: number) => {
     if (lobby?.status !== "live" || !isMyTurn || gameState?.isAnimating) return;
+    soundManager.playPop();
     await makeMove(row, col);
   };
 
@@ -285,9 +287,23 @@ function OnlineGameContent() {
                 {isWinner ? "You Won!" : "Game Over"}
               </h2>
               <p className="text-xl font-bold mb-8 text-black">
-                {isWinner
-                  ? `You won $${prizePool}!`
-                  : `${winner?.name || "Opponent"} won.`}
+                {isWinner ? (
+                  <span>You won <span className="text-green-600">${prizePool}</span>!</span>
+                ) : (
+                  <span style={{
+                    color: winner?.color === 'red' ? '#FF9AA2' :
+                      winner?.color === 'blue' ? '#C7CEEA' :
+                        winner?.color === 'green' ? '#B5EAD7' :
+                          winner?.color === 'yellow' ? '#FFF7B1' :
+                            winner?.color === 'purple' ? '#E0BBE4' :
+                              winner?.color === 'orange' ? '#FFDAC1' :
+                                winner?.color === 'pink' ? '#F8BBD0' :
+                                  '#B2EBF2',
+                    textShadow: '1px 1px 0 #000'
+                  }}>
+                    {winner?.name || "Opponent"} won.
+                  </span>
+                )}
               </p>
 
               <div className="flex flex-col gap-3">
