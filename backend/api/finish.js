@@ -1,5 +1,7 @@
 import { finishMatch } from "../oracle.js";
 
+// Forced update: 2025-12-01 19:30
+
 async function handler(req, res) {
     console.log("REQ BODY:", req.body);
 
