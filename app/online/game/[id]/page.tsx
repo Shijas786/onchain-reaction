@@ -43,13 +43,7 @@ function TimerDisplay({
 
   if (!isLive) return null;
 
-  if (!turnDeadline) {
-    return (
-      <div className="fixed top-20 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full border-2 border-black bg-yellow-100 text-yellow-800 font-bold shadow-md z-50">
-        ⚠️ Timer Sync Error (Check Console)
-      </div>
-    );
-  }
+  if (!turnDeadline) return null;
 
   return (
     <>
@@ -382,14 +376,7 @@ function OnlineGameContent() {
       </AnimatePresence>
 
       {/* Debug Overlay */}
-      <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded-xl text-xs font-mono z-50 pointer-events-none hidden sm:block">
-        <p>Lobby Status: {lobby?.status}</p>
-        <p>Game State: {gameState ? "Loaded" : "Missing"}</p>
-        <p>Turn Deadline: {gameState?.turnDeadline?.toString() || "undefined"}</p>
-        <p>Is Live: {lobby?.status === "live" ? "Yes" : "No"}</p>
-        <p>My Turn: {isMyTurn ? "Yes" : "No"}</p>
-        <p>Players: {players.length}</p>
-      </div>
+
     </>
   );
 }
