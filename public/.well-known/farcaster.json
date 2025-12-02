@@ -1,0 +1,37 @@
+{
+    "frame": {
+        "name": "OnchainReaction",
+        "version": "1",
+        "iconUrl": "https://onchainreaction.vercel.app/icon.png",
+        "homeUrl": "https://onchainreaction.vercel.app/",
+        "imageUrl": "https://onchainreaction.vercel.app/image.png",
+        "buttonTitle": "Open app",
+        "splashImageUrl": "https://onchainreaction.vercel.app/splash.gif",
+        "splashBackgroundColor": "#FFFFFF",
+        "webhookUrl": "https://onchainreaction.vercel.app/api/webhook",
+        "subtitle": "Real-time onchain strategy.",
+        "description": "A fast, real-time Chain Reaction strategy game played onchain with USDC stakes. Create rooms, compete in explosive orb battles, and claim the winner-takes-all pot.",
+        "primaryCategory": "games",
+        "screenshotUrls": [
+            "https://onchainreaction.vercel.app/screenshots/1.png"
+        ],
+        "heroImageUrl": "https://onchainreaction.vercel.app/hero.png",
+        "tags": [
+            "chainreaction",
+            "games",
+            "bet",
+            "free",
+            "airdrop"
+        ],
+        "tagline": "Explode, Dominate, Win the Pot",
+        "ogTitle": "Explosive Onchain Strategy",
+        "ogDescription": "Play Chain Reaction with real stakes. Join rooms, make moves, and win USDC ",
+        "ogImageUrl": "https://onchainreaction.vercel.app/og.png",
+        "castShareUrl": "https://onchainreaction.vercel.app/share"
+    },
+    "accountAssociation": {
+        "header": "eyJmaWQiOjI1OTkxMywidHlwZSI6ImF1dGgiLCJrZXkiOiIweDE2QmM5MDJjYzk3NDRkOThmRjAzRDEyOTA0MjVhRkQ0RDRiOTAyMWEifQ",
+        "payload": "eyJkb21haW4iOiJvbmNoYWlucmVhY3Rpb24udmVyY2VsLmFwcCJ9",
+        "signature": "lI7cf3QYbmT5Iw2YsD95W40ovXrudBdiDKDmUiM2bN9Wdxxtvg6EWUdbgHBpNx7/8lnE3eSBrKWvXuFaDtwP1Rw="
+    }
+}
