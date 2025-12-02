@@ -146,6 +146,15 @@ export const onchainReactionAbi = [
     inputs: [{ name: "matchId", type: "uint256" }],
     outputs: [{ name: "", type: "address[]" }],
   },
+
+  // emergencyCancelMatch(matchId)
+  {
+    type: "function",
+    name: "emergencyCancelMatch",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "matchId", type: "uint256" }],
+    outputs: [],
+  },
 ] as const;
 
 
