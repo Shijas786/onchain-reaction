@@ -4,8 +4,9 @@ export async function GET() {
     <!DOCTYPE html>
     <html>
       <head>
-        <meta charset="UTF-8" />
         <title>Onchain Reaction</title>
+        <meta charset="utf-8"/>
+        <meta http-equiv="refresh" content="0; url=/miniapp/app" />
       </head>
       <body>Loading Mini App…</body>
     </html>
@@ -14,7 +15,7 @@ export async function GET() {
             headers: {
                 "Farcaster-Miniapp": "v1",
                 "Content-Type": "text/html",
-            },
+            }
         }
     );
 }
