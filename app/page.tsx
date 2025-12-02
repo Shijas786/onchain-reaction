@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { DoodleText } from "@/components/ui/DoodleText";
+import { HowToPlay } from "@/components/ui/HowToPlay";
 
 export default function Home() {
   return (
@@ -58,9 +59,9 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* Web3 Info */}
-        <div className="text-center text-xs text-slate-400 mt-4">
-          <p>Play for USDC on Base & Arbitrum</p>
+        {/* How to Play */}
+        <div className="mt-4">
+          <HowToPlay />
         </div>
       </div>
     </main>

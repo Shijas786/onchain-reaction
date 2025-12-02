@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { PrizeCard } from "@/components/web3/ClaimPrizeButton";
-import { DoodleBackground } from "@/components/ui/DoodleBackground";
+import { BackgroundAnimation } from "@/components/ui/BackgroundAnimation";
 import { Button } from "@/components/ui/Button";
 import { motion } from "framer-motion";
 
@@ -59,7 +59,7 @@ export default function PrizesPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center p-8 relative overflow-hidden">
-      <DoodleBackground />
+      <BackgroundAnimation />
 
       <div className="w-full max-w-2xl relative z-10 space-y-6">
         {/* Header */}
