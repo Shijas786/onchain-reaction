@@ -106,6 +106,10 @@ contract OnchainReaction is Ownable {
         emit MatchCreated(id, msg.sender);
     }
 
+    function getPlayers(uint256 id) external view returns (address[] memory) {
+        return matchPlayers[id];
+    }
+
     // ------------------------
     // JOIN / LEAVE MATCH
     // ------------------------

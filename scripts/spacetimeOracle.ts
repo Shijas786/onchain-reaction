@@ -134,6 +134,19 @@ async function finalizeMatchOnChain(
     const walletClient = getWalletClient(chainId);
     const publicClient = getPublicClient(chainId);
 
+    // Verify winner is a player in the match
+    const isPlayer = await publicClient.readContract({
+      address: arenaAddress,
+      abi: onchainReactionAbi,
+      functionName: "isPlayerInMatch",
+      args: [matchId, winnerAddress],
+    });
+
+    if (!isPlayer) {
+      console.log(`❌ Winner ${winnerAddress} is NOT a player in match ${matchId} on-chain. Skipping finalization.`);
+      return { success: false, error: "Winner not in match" };
+    }
+
     // Execute transaction directly
     const txHash = await walletClient.writeContract({
       address: arenaAddress,
