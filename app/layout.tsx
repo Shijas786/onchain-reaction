@@ -4,7 +4,6 @@ import "./globals.css";
 
 import { headers } from "next/headers"; // Import headers function
 import ContextProvider from "@/context"; // Adjust import path if needed
-import FarcasterProvider from "@/components/providers/FarcasterProvider";
 
 const fredoka = Fredoka({
   subsets: ["latin"],
@@ -40,9 +39,7 @@ export default async function RootLayout({
       >
         {/* Wrap children with ContextProvider, passing cookies */}
         <ContextProvider cookies={cookies}>
-          <FarcasterProvider>
-            {children}
-          </FarcasterProvider>
+          {children}
         </ContextProvider>
       </body>
     </html>
