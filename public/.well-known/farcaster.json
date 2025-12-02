@@ -3,7 +3,7 @@
         "name": "OnchainReaction",
         "version": "1",
         "iconUrl": "https://onchainreaction.vercel.app/icon.png",
-        "homeUrl": "https://onchainreaction.vercel.app/",
+        "homeUrl": "https://onchainreaction.vercel.app/miniapp",
         "imageUrl": "https://onchainreaction.vercel.app/hero.png",
         "buttonTitle": "Open app",
         "splashImageUrl": "https://onchainreaction.vercel.app/splash.gif",
