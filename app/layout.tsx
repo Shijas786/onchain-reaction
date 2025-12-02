@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fredoka } from "next/font/google";
+import { Fredoka, Schoolbell } from "next/font/google";
 import "./globals.css";
 
 import { headers } from "next/headers"; // Import headers function
@@ -9,6 +9,12 @@ const fredoka = Fredoka({
   subsets: ["latin"],
   variable: "--font-fredoka",
   weight: ["300", "400", "500", "600", "700"],
+});
+
+const schoolbell = Schoolbell({
+  subsets: ["latin"],
+  variable: "--font-schoolbell",
+  weight: ["400"],
 });
 
 export const metadata: Metadata = {
@@ -29,7 +35,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${fredoka.variable} antialiased font-sans text-slate-900 select-none`}
+        className={`${fredoka.variable} ${schoolbell.variable} antialiased font-sans text-slate-900 select-none`}
       >
         {/* Wrap children with ContextProvider, passing cookies */}
         <ContextProvider cookies={cookies}>{children}</ContextProvider>
