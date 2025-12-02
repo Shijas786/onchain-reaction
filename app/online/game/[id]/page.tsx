@@ -2,12 +2,13 @@
 
 import { useEffect, useState, Suspense, useMemo, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { BoardRenderer } from "@/components/game/BoardRenderer";
 import { Button } from "@/components/ui/Button";
 import { useLobby, useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 import { useVisualBoard } from "@/hooks/useVisualBoard";
-import { formatUSDC } from "@/lib/contracts";
+import { formatUSDC, formatPrize, ARENA_ADDRESSES } from "@/lib/contracts";
+import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
 import { motion, AnimatePresence } from "framer-motion";
 import { Board, Player, PlayerColor as GamePlayerColor } from "@/types/game";
 import { getMaxCapacity } from "@/lib/gameLogic";
@@ -93,6 +94,17 @@ function OnlineGameContent() {
     leaveLobby,
     claimTimeout,
   } = useLobby(lobbyId);
+
+  // Fetch match data from contract to get token address and accurate prize pool
+  const { data: matchData } = useReadContract({
+    address: ARENA_ADDRESSES[chainId],
+    abi: ChainOrbArenaAbi,
+    functionName: "matches",
+    args: lobby ? [BigInt(lobby.matchId)] : undefined,
+    query: {
+      enabled: !!lobby,
+    }
+  });
 
   // Convert SpacetimeDB board to game board format
   const gameBoard = useMemo((): Board => {
@@ -240,7 +252,16 @@ function OnlineGameContent() {
 
   const winner = players.find(p => p.address === lobby.winnerAddress);
   const isWinner = currentPlayer?.address === lobby.winnerAddress;
-  const prizePool = formatUSDC(lobby.entryFee ? BigInt(lobby.entryFee) * BigInt(players.length) : BigInt(0));
+
+  const match = matchData as any;
+  const tokenAddress = match?.[1] as string | undefined; // token is at index 1 in Match struct
+  const contractPrizePool = match?.[4] as bigint | undefined; // prizePool is at index 4
+
+  // Fallback to calculated prize pool if contract read fails or is loading
+  const calculatedPrizePool = lobby.entryFee ? BigInt(lobby.entryFee) * BigInt(players.length) : BigInt(0);
+  const finalPrizePool = contractPrizePool ?? calculatedPrizePool;
+
+  const prizePoolFormatted = formatPrize(tokenAddress, finalPrizePool);
 
   return (
     <>
@@ -259,7 +280,7 @@ function OnlineGameContent() {
 
           <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <span className="text-black text-sm font-bold uppercase tracking-wider">Prize:</span>
-            <span className="text-black font-bold text-lg">${prizePool}</span>
+            <span className="text-black font-bold text-lg">{prizePoolFormatted}</span>
           </div>
         </div>
 
@@ -335,7 +356,7 @@ function OnlineGameContent() {
               </h2>
               <p className="text-xl font-bold mb-8 text-black">
                 {isWinner ? (
-                  <span>You won <span className="text-green-600">${prizePool}</span>!</span>
+                  <span>You won <span className="text-green-600">{prizePoolFormatted}</span>!</span>
                 ) : (
                   <span style={{
                     color: winner?.color === 'red' ? '#FF9AA2' :

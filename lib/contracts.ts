@@ -1,5 +1,6 @@
 // Contract addresses and chain configuration
 import { base, arbitrum } from 'viem/chains'
+import { formatUnits } from 'viem'
 
 // Chain IDs
 export const CHAIN_IDS = {
@@ -58,6 +59,51 @@ export const TOKENS = {
     },
   },
 } as const
+
+export interface TokenMetadata {
+  symbol: string;
+  decimals: number;
+  isStable: boolean;
+}
+
+export const TOKEN_METADATA: Record<string, TokenMetadata> = {
+  // Base USDC
+  [USDC_ADDRESSES[CHAIN_IDS.BASE].toLowerCase()]: {
+    symbol: 'USDC',
+    decimals: 6,
+    isStable: true,
+  },
+  // Arbitrum USDC
+  [USDC_ADDRESSES[CHAIN_IDS.ARBITRUM].toLowerCase()]: {
+    symbol: 'USDC',
+    decimals: 6,
+    isStable: true,
+  },
+  // Base JESSE
+  [BASE_JESSE.toLowerCase()]: {
+    symbol: 'JESSE',
+    decimals: 18,
+    isStable: false,
+  },
+};
+
+export const formatPrize = (tokenAddress: string | undefined, rawPrize: bigint): string => {
+  if (!tokenAddress) return formatUSDC(rawPrize); // Default fallback
+
+  const metadata = TOKEN_METADATA[tokenAddress.toLowerCase()];
+  if (!metadata) {
+    // Fallback for unknown tokens, assume 18 decimals and show raw amount
+    return `${formatTokenAmount(rawPrize, 18)} TOKEN`;
+  }
+
+  const formatted = formatUnits(rawPrize, metadata.decimals);
+
+  if (metadata.isStable) {
+    return `$${formatted}`;
+  } else {
+    return `${formatted} ${metadata.symbol}`;
+  }
+};
 
 // Convert human readable amount to wei
 export const parseTokenAmount = (amount: string | number, decimals: number): bigint => {
