@@ -1,36 +1,203 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+⚡ Onchain Reaction
 
-## Getting Started
+Chain Reaction but with real money, real wallets, and real explosions.
+Runs on Base + Arbitrum, uses SpacetimeDB for realtime turns, and connects wallets through Reown (WalletConnect AppKit) so users don’t suffer.
 
-First, run the development server:
+🔐 Wallet Connection (Reown AppKit)
 
-```bash
+The app uses Reown AppKit — basically WalletConnect but actually usable:
+
+Connect from any wallet (MetaMask, Coinbase, Rabby, OKX, Uniswap, etc.)
+
+Mobile ↔ desktop linking works smoothly
+
+No weird popups or broken providers
+
+Same experience on Farcaster Frames (when embedded)
+
+Easy network switching between Base & Arbitrum
+
+Stable session — doesn’t disconnect mid-match like raw WalletConnect
+
+It’s wired up in:
+
+app/providers.tsx
+components/web3/AppKitProvider.tsx
+
+
+You don’t need to touch anything unless you want to add custom themes or restrict supported wallets.
+
+That’s it. It works, it’s stable, and it doesn’t pollute window.ethereum like half the crypto wallets do.
+
+Full README (WITH Reown section included cleanly)
+
+Use this version for your repo:
+
+⚡ Onchain Reaction
+
+A Chain Reaction (Orbs) multiplayer game that runs partly on-chain and partly in SpacetimeDB.
+Winner gets the USDC pool. Supports Base, Arbitrum, and full wallet connection via Reown (WalletConnect AppKit).
+
+🎮 TL;DR
+
+Place orbs → cells explode → chain reactions happen → colors flip
+
+Last player alive wins all the USDC
+
+Realtime sync via SpacetimeDB
+
+Deposits + claims handled by Base/Arbitrum smart contracts
+
+Works on mobile + desktop, wallets via Reown
+
+🔐 Wallets (Reown AppKit)
+
+This app uses Reown AppKit for wallet connection — because plain Metamask injection is garbage when you also want to support mobile, WalletConnect, Farcaster Frames, and multiple browser extensions.
+
+Why Reown works here:
+
+Works universally across wallets
+
+No “window.ethereum override” issues
+
+Clean UI modal
+
+Proper chain switching
+
+Mobile QR connections are stable
+
+Zero custom setup needed
+
+Perfect for embedding inside Farcaster mini-apps
+
+If a user can’t connect their wallet with Reown, it’s on their wallet — not on you.
+
+✨ Features
+
+🔥 2–5 player online matches
+
+💰 Real USDC entry fees & prize pool
+
+⚡ Realtime gameplay via SpacetimeDB
+
+🔗 Base + Arbitrum contract support
+
+🖥️ Smooth doodle-style 3D-ish board
+
+🤝 Reown AppKit wallet connection (multi-wallet support)
+
+🎯 Local multiplayer mode
+
+🤖 Oracle auto-settles winners on-chain
+
+🛠 Tech Stack
+Frontend
+
+Next.js (App Router)
+
+React / TS
+
+Tailwind
+
+Framer Motion
+
+Reown AppKit (WalletConnect)
+
+Wagmi + viem
+
+Backend
+
+SpacetimeDB (Rust)
+
+Solidity contracts
+
+Oracle service (Node.js)
+
+Infra
+
+Vercel (frontend)
+
+Render (oracle)
+
+Base / Arbitrum (contracts)
+
+📁 Repo Structure
+app/
+ ├─ local/        # offline matches
+ ├─ online/       # online multiplayer
+ ├─ profile/      # prizes, history
+ ├─ api/          
+components/
+contracts/
+lib/
+spacetimedb-module/  # Rust real-time logic
+backend/             # oracle
+scripts/
+
+🚀 Run it Locally
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Add .env.local:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+NEXT_PUBLIC_PROJECT_ID=<reown project id>
+NEXT_PUBLIC_SPACETIMEDB_HOST=<host>
+NEXT_PUBLIC_SPACETIMEDB_MODULE=<module>
+RPC_URL_BASE=https://mainnet.base.org
+RPC_URL_ARBITRUM=https://arb1.arbitrum.io/rpc
+ORACLE_PRIVATE_KEY=0x...
 
-## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+Open → http://localhost:3000
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+🎮 Online Match Flow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Connect wallet (Reown modal pops up)
 
-## Deploy on Vercel
+Create match
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Choose Base / Arbitrum
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set entry fee
+
+Approve USDC
+
+Share match ID
+
+Everyone joins
+
+Game starts automatically
+
+Winner claims USDC on-chain
+
+🏆 Contracts
+
+OnchainReactionBase.sol → Base
+
+OnchainReactionArbitrum.sol → Arbitrum
+
+Both store the pot, enforce deposits, and allow the winner to claim.
+
+🔧 Oracle
+
+Small Node script watching SpacetimeDB → calls finishMatch() on contract.
+
+Lives in backend/.
+
+🧱 Deployment Notes
+
+Vercel for frontend
+
+Render/Railway for oracle
+
+SpacetimeDB via CLI
+
+Contracts via Remix or Foundry
+
+Make sure oracle runs 24/7 or matches won’t settle on-chain.
+
+⚠️ Security Notes
+
+This is not audited.
+Use low-stakes USDC only.
