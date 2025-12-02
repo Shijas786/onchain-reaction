@@ -28,13 +28,8 @@ async function main() {
                         const targetMatches = [33, 34, 35, 36, 37, 38];
 
                         targetMatches.forEach(matchId => {
-                            // Note: SpacetimeDB might store matchId as number or string, check both
-                            // Also check if matchId is BigInt
-                            const lobby = lobbies.find(l =>
-                                l.matchId === matchId ||
-                                Number(l.matchId) === matchId ||
-                                String(l.matchId) === String(matchId)
-                            );
+                            // Fix: Convert both to string for safe comparison to avoid BigInt/number type errors
+                            const lobby = lobbies.find(l => String(l.matchId) === String(matchId));
 
                             if (lobby) {
                                 console.log(`\nMatch #${matchId}: FOUND`);
