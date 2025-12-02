@@ -8,19 +8,6 @@ const nextConfig = {
       },
     ],
   },
-  async headers() {
-    return [
-      {
-        source: "/miniapp",
-        headers: [
-          {
-            key: "Farcaster-Miniapp",
-            value: "v1",
-          },
-        ]
-      }
-    ]
-  }
 };
 
 export default nextConfig;
