@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { headers } from "next/headers"; // Import headers function
 import ContextProvider from "@/context"; // Adjust import path if needed
+import FarcasterProvider from "@/components/providers/FarcasterProvider";
 
 const fredoka = Fredoka({
   subsets: ["latin"],
@@ -38,7 +39,11 @@ export default async function RootLayout({
         className={`${fredoka.variable} ${schoolbell.variable} antialiased font-sans text-slate-900 select-none`}
       >
         {/* Wrap children with ContextProvider, passing cookies */}
-        <ContextProvider cookies={cookies}>{children}</ContextProvider>
+        <ContextProvider cookies={cookies}>
+          <FarcasterProvider>
+            {children}
+          </FarcasterProvider>
+        </ContextProvider>
       </body>
     </html>
   );
