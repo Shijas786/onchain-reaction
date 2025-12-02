@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
-import { DoodleBackground } from "@/components/ui/DoodleBackground";
+import { BackgroundAnimation } from "@/components/ui/BackgroundAnimation";
 import { CreateMatchButton } from "@/components/web3/CreateMatchButton";
 import { ARENA_ADDRESSES, getChainName } from "@/lib/contracts";
 
@@ -34,7 +34,7 @@ export default function OnlineMenu() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-8 relative overflow-y-auto">
-      <DoodleBackground />
+      <BackgroundAnimation />
       <div className="w-full max-w-md space-y-6 relative z-10">
         {/* Header */}
         <div className="text-center">

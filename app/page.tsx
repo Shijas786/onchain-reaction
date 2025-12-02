@@ -12,11 +12,13 @@ export default function Home() {
         <appkit-button />
       </div>
 
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-[#FF9AA2] rounded-full blur-xl border-4 border-black" />
-        <div className="absolute bottom-10 right-10 w-64 h-64 bg-[#C7CEEA] rounded-full blur-xl border-4 border-black" />
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-[#FFF7B1] rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      {/* Background Image */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src="/homescreen-bg.jpg"
+          alt="Background"
+          className="w-full h-full object-cover opacity-50"
+        />
       </div>
 
       <div className="z-10 flex flex-col items-center gap-8">
