@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
@@ -106,7 +106,7 @@ function LobbyContent() {
   });
 
   // Parse match info
-  const match = matchInfo
+  const match = useMemo(() => matchInfo
     ? {
       host: (matchInfo as any)[0] as string,
       token: (matchInfo as any)[1] as `0x${string}`,
@@ -116,7 +116,7 @@ function LobbyContent() {
       status: Number((matchInfo as any)[5]),
       winner: (matchInfo as any)[6] as string,
     }
-    : null;
+    : null, [matchInfo]);
 
   // Determine token details
   const tokenSymbol = match?.token?.toLowerCase() === BASE_JESSE.toLowerCase() ? 'JESSE' : 'USDC';

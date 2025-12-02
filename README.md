@@ -1,117 +1,86 @@
-⚡ Onchain Reaction
+Onchain Reaction
 
-Chain Reaction but with real money, real wallets, and real explosions.
-Runs on Base + Arbitrum, uses SpacetimeDB for realtime turns, and connects wallets through Reown (WalletConnect AppKit) so users don’t suffer.
+Chain Reaction… but on-chain, realtime, and with USDC on the line.
 
-🔐 Wallet Connection (Reown AppKit)
+This is a multiplayer Chain Reaction (Orbs) game that runs partly on-chain and partly on SpacetimeDB.
+You place orbs, things explode, people rage-quit, winner takes the USDC pot. Works on Base and Arbitrum.
 
-The app uses Reown AppKit — basically WalletConnect but actually usable:
+If you just want to play:
+→ create match → join → place orbs → survive.
+If you're a dev: keep reading.
 
-Connect from any wallet (MetaMask, Coinbase, Rabby, OKX, Uniswap, etc.)
+🎮 TL;DR: What the Game Actually Is
 
-Mobile ↔ desktop linking works smoothly
+You click a cell → an orb goes in.
 
-No weird popups or broken providers
+When a cell hits its limit, it explodes and sends orbs to neighbors.
 
-Same experience on Farcaster Frames (when embedded)
+Colors flip, huge chain reactions happen, someone cries.
 
-Easy network switching between Base & Arbitrum
+Last player with orbs wins the entire USDC entry pool.
 
-Stable session — doesn’t disconnect mid-match like raw WalletConnect
+Cell limits:
 
-It’s wired up in:
+Cell Type	Capacity Before Boom
+Corners	1
+Edges	2
+Center	3
 
-app/providers.tsx
-components/web3/AppKitProvider.tsx
+That's it. Same rules as the classic mobile game — just turned into a Web3 deathmatch.
 
+✨ What the App Actually Does
+✔ Real-time online matches
 
-You don’t need to touch anything unless you want to add custom themes or restrict supported wallets.
+SpacetimeDB handles turns, animations, eliminations — zero lag.
 
-That’s it. It works, it’s stable, and it doesn’t pollute window.ethereum like half the crypto wallets do.
+✔ On-chain USDC stakes
 
-Full README (WITH Reown section included cleanly)
+Create a match → set entry fee → players deposit → winner claims on-chain.
 
-Use this version for your repo:
+✔ Base + Arbitrum support
 
-⚡ Onchain Reaction
+One repo, two contracts.
+Arb = fast. Base = cheap.
 
-A Chain Reaction (Orbs) multiplayer game that runs partly on-chain and partly in SpacetimeDB.
-Winner gets the USDC pool. Supports Base, Arbitrum, and full wallet connection via Reown (WalletConnect AppKit).
+✔ Local multiplayer
 
-🎮 TL;DR
+Old-school: 2–5 players on the same device.
 
-Place orbs → cells explode → chain reactions happen → colors flip
+✔ Clean UI
 
-Last player alive wins all the USDC
+Doodle-ish board, smooth orbs, not the usual Web3 trash UI.
 
-Realtime sync via SpacetimeDB
+✔ Oracle service
 
-Deposits + claims handled by Base/Arbitrum smart contracts
+A tiny background worker that finalizes SpacetimeDB games on-chain.
 
-Works on mobile + desktop, wallets via Reown
+✔ Connect with AppKit
 
-🔐 Wallets (Reown AppKit)
+WalletConnect-based. Works on mobile, desktop, anything.
 
-This app uses Reown AppKit for wallet connection — because plain Metamask injection is garbage when you also want to support mobile, WalletConnect, Farcaster Frames, and multiple browser extensions.
+🛠 Tech Stack (as it is, not sugar-coated)
 
-Why Reown works here:
-
-Works universally across wallets
-
-No “window.ethereum override” issues
-
-Clean UI modal
-
-Proper chain switching
-
-Mobile QR connections are stable
-
-Zero custom setup needed
-
-Perfect for embedding inside Farcaster mini-apps
-
-If a user can’t connect their wallet with Reown, it’s on their wallet — not on you.
-
-✨ Features
-
-🔥 2–5 player online matches
-
-💰 Real USDC entry fees & prize pool
-
-⚡ Realtime gameplay via SpacetimeDB
-
-🔗 Base + Arbitrum contract support
-
-🖥️ Smooth doodle-style 3D-ish board
-
-🤝 Reown AppKit wallet connection (multi-wallet support)
-
-🎯 Local multiplayer mode
-
-🤖 Oracle auto-settles winners on-chain
-
-🛠 Tech Stack
 Frontend
 
 Next.js (App Router)
 
-React / TS
+React + Typescript
 
 Tailwind
 
 Framer Motion
 
-Reown AppKit (WalletConnect)
+Wagmi + Viem
 
-Wagmi + viem
+Reown AppKit (WalletConnect v2, painless setup)
 
 Backend
 
-SpacetimeDB (Rust)
+SpacetimeDB (Rust) → realtime game logic
 
-Solidity contracts
+Solidity contracts → deposits, payouts, escrow
 
-Oracle service (Node.js)
+Node oracle → listens to SpacetimeDB, writes to chain
 
 Infra
 
@@ -119,85 +88,168 @@ Vercel (frontend)
 
 Render (oracle)
 
-Base / Arbitrum (contracts)
+Base + Arbitrum (contracts)
 
-📁 Repo Structure
-app/
- ├─ local/        # offline matches
- ├─ online/       # online multiplayer
- ├─ profile/      # prizes, history
- ├─ api/          
-components/
-contracts/
-lib/
-spacetimedb-module/  # Rust real-time logic
-backend/             # oracle
-scripts/
+USDC (stable prize token)
 
-🚀 Run it Locally
+📁 Repo Structure (developer-friendly version)
+app/                # UI routes (Next.js)
+ ├── local/         # offline multiplayer
+ ├── online/        # online lobby + matches
+ ├── profile/       # your matches + prizes
+ └── api/           # serverless endpoints
+components/         # UI + game components
+contracts/          # Solidity contracts
+spacetimedb-module/ # Rust realtime engine
+backend/            # oracle
+lib/                # utils, game logic, contract hooks
+scripts/            # helpers (oracle runner, etc.)
+
+
+If you're lost, look at components/game/* and lib/gameLogic.ts.
+
+🚀 Running Locally (real steps, not fluff)
+
+Clone it:
+
+git clone <repo-url>
+cd onchain-reaction-1
+
+
+Install:
+ 
 npm install
+
+ 
+Add .env.local:
+
+NEXT_PUBLIC_PROJECT_ID=walletconnect_project_id
+NEXT_PUBLIC_SPACETIMEDB_HOST=xxxx
+NEXT_PUBLIC_SPACETIMEDB_MODULE=xxxx
+RPC_URL_BASE=https://mainnet.base.org
+RPC_URL_ARBITRUM=https://arb1.arbitrum.io/rpc
+ORACLE_PRIVATE_KEY=0xabc...
+
+
+Run:
+ 
 npm run dev
 
 
-Add .env.local:
+Now open:
+http://localhost:3000
 
-NEXT_PUBLIC_PROJECT_ID=<reown project id>
-NEXT_PUBLIC_SPACETIMEDB_HOST=<host>
-NEXT_PUBLIC_SPACETIMEDB_MODULE=<module>
-RPC_URL_BASE=https://mainnet.base.org
-RPC_URL_ARBITRUM=https://arb1.arbitrum.io/rpc
-ORACLE_PRIVATE_KEY=0x...
+Good. If it crashes → your .env is wrong.
 
+🎮 Playing Online Matches
 
-Open → http://localhost:3000
+1. Connect Wallet
 
-🎮 Online Match Flow
+2. Create Match
 
-Connect wallet (Reown modal pops up)
+Choose Base or Arbitrum
 
-Create match
+Set entry fee (USDC)
 
-Choose Base / Arbitrum
+Approve + deposit
 
-Set entry fee
+3. Join Match
 
-Approve USDC
+Send match ID to friends
 
-Share match ID
+They deposit USDC too
 
-Everyone joins
+4. Play
 
-Game starts automatically
+Turn-based, real-time
 
-Winner claims USDC on-chain
+SpacetimeDB syncs everything
 
-🏆 Contracts
+5. Winner claims
+Contract releases full prize to the final player standing.
 
-OnchainReactionBase.sol → Base
+🏗 How This All Works (simplified)
+SpacetimeDB (off-chain but authoritative)
 
-OnchainReactionArbitrum.sol → Arbitrum
+Tracks players
 
-Both store the pot, enforce deposits, and allow the winner to claim.
+Tracks board
 
-🔧 Oracle
+Validates moves
 
-Small Node script watching SpacetimeDB → calls finishMatch() on contract.
+Triggers chain reactions
 
-Lives in backend/.
+Detects winner
 
-🧱 Deployment Notes
+Think of it as "match engine".
 
-Vercel for frontend
+Smart Contract (on-chain, money logic)
 
-Render/Railway for oracle
+Holds everyone's USDC entry fee
 
-SpacetimeDB via CLI
+Oracle calls finishMatch(matchId, winner)
 
-Contracts via Remix or Foundry
+Winner can withdraw prize
 
-Make sure oracle runs 24/7 or matches won’t settle on-chain.
+Oracle (bridge between them)
 
-⚠️ Security Notes
+Polls SpacetimeDB for finished games
 
-This is not audited.
-Use low-stakes USDC only.
+Calls contract with winner
+
+That's it
+
+No magic, no VRF, no randomness.
+
+🔥 Deployment Quick Notes
+Vercel (frontend)
+
+Connect repo
+
+Add envs
+
+Push → auto deploy
+
+Contracts
+
+Deploy Base version
+
+Deploy Arbitrum version
+
+Update lib/contracts.ts
+
+SpacetimeDB
+spacetimedb login
+spacetimedb publish <module-name>
+
+Oracle
+
+Deploy to Render / Railway / server
+
+Set private key
+
+Set RPCs
+
+If oracle stops, games don't settle.
+If contract is wrong, money is stuck.
+If SpacetimeDB dies, matches freeze.
+This is Web3. Don't screw deployments.
+
+⚠️ Security (basic realism)
+
+OZ contracts
+
+No upgradeability
+
+Owner restricted to oracle stuff only
+
+Entry fees locked until finishMatch
+
+Never expose private key
+
+This isn't audited — use tiny stakes only.
+
+🤝 Want to Contribute?
+
+PRs are welcome if they're not stupid.
+Open an issue if you're stuck.

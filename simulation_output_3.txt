@@ -1,7 +1,0 @@
-﻿Simulating Claim Prize:
-Chain ID: 8453
-Match ID: 8
-Winner (Impersonated): 0x6C31212a23040998E1D1c157ACe3982aBDBE3154
-Arena Address: 0x7B04eb09b6748097067c7C9d97C545ADDFD7C97E
-Contract State: Status=1 (type: number), Winner=0x0000000000000000000000000000000000000000
-Simulating claimPrize transaction...
