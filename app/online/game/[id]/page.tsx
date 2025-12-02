@@ -268,12 +268,12 @@ function OnlineGameContent() {
       {/* Floating UI Container */}
       <div className="absolute top-0 left-0 w-full z-10 flex flex-col items-center pointer-events-none pt-[env(safe-area-inset-top)]">
         {/* Top Bar */}
-        <div className="w-full max-w-lg flex justify-between items-center p-2 sm:p-4 pointer-events-auto">
+        <div className="w-full max-w-lg flex justify-between items-center p-2 sm:p-4">
           <Button
             variant="secondary"
             size="sm"
             onClick={handleExit}
-            className="bg-white text-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold"
+            className="bg-white text-black border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-bold pointer-events-auto"
           >
             Exit
           </Button>
@@ -285,7 +285,7 @@ function OnlineGameContent() {
         </div>
 
         {/* Player List (Turn Indicator Style) */}
-        <div className="w-full max-w-lg px-2 sm:px-4 pointer-events-auto">
+        <div className="w-full max-w-lg px-2 sm:px-4">
           <div className="flex items-center justify-center gap-2 py-2 flex-wrap max-w-full overflow-x-auto no-scrollbar">
             {gamePlayers.map((player) => (
               <div
