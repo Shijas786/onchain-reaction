@@ -7,7 +7,7 @@
         "imageUrl": "https://onchainreaction.vercel.app/hero.png",
         "buttonTitle": "Open app",
         "splashImageUrl": "https://onchainreaction.vercel.app/splash.gif",
-        "splashBackgroundColor": "#B8F5E3",
+        "splashBackgroundColor": "#FFFFFF",
         "webhookUrl": "https://onchainreaction.vercel.app/api/webhook",
         "subtitle": "Real-time onchain strategy.",
         "description": "A fast, real-time Chain Reaction strategy game played onchain with USDC stakes. Create rooms, compete in explosive orb battles, and claim the winner-takes-all pot.",
