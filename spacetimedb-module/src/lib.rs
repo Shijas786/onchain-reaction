@@ -571,6 +571,19 @@ pub fn make_move(
             ..lobby
         });
         log::info!("Game finished! Winner: {} ({})", winner.name, winner.address);
+        
+        // Update final board state
+        ctx.db.game_state().lobby_id().update(GameState {
+            board_json: serde_json::to_string(&board).unwrap(),
+            move_count: game_state.move_count + 1,
+            last_move_at: ctx.timestamp,
+            turn_lock_until: None,
+            last_move_player: Some(ctx.sender),
+            ..game_state
+        });
+        
+        // CRITICAL: Return early - game is over, no more moves allowed
+        return;
     }
 
     // Record move
