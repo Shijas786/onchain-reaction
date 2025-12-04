@@ -79,6 +79,8 @@ pub struct GameState {
     pub move_count: u32,
     pub last_move_at: Timestamp,
     pub turn_deadline: Timestamp, // When the current turn expires
+    pub turn_lock_until: Option<Timestamp>, // Turn lock to prevent race conditions
+    pub last_move_player: Option<Identity>, // Last player who made a move
 }
 
 /// GameMove - Individual moves for replay/verification
@@ -221,6 +223,8 @@ pub fn create_lobby(
         move_count: 0,
         last_move_at: now,
         turn_deadline: now, // Will be set correctly on start_game
+        turn_lock_until: None,
+        last_move_player: None,
     });
 
     log::info!("Lobby created: {} by {:?}", lobby_id, ctx.sender);
@@ -376,6 +380,20 @@ pub fn make_move(
     let game_state = ctx.db.game_state().lobby_id().find(&lobby_id)
         .expect("Game state not found");
 
+    // === TURN LOCK CHECK (Prevent race conditions) ===
+    if let Some(lock_time) = game_state.turn_lock_until {
+        if ctx.timestamp < lock_time {
+            panic!("Turn is locked, please retry in 50ms");
+        }
+    }
+
+    // === RATE LIMITING (Prevent spam) ===
+    if let Some(time_since_last) = ctx.timestamp.duration_since(game_state.last_move_at) {
+        if time_since_last < std::time::Duration::from_millis(300) {
+            panic!("Move too fast, wait 300ms between moves");
+        }
+    }
+
     if game_state.is_animating {
         panic!("Wait for animation to finish");
     }
@@ -390,6 +408,47 @@ pub fn make_move(
 
     if players.is_empty() {
         panic!("No active players");
+    }
+
+    // === AUTO-TIMEOUT CHECK ===
+    // If current player's turn has expired, auto-eliminate them
+    if ctx.timestamp > game_state.turn_deadline {
+        let timed_out_idx = game_state.current_player_index as usize % players.len();
+        let timed_out_player = &players[timed_out_idx];
+        
+        log::info!("Player {} auto-timed out!", timed_out_player.name);
+        
+        // Eliminate timed-out player
+        ctx.db.lobby_player().id().update(LobbyPlayer {
+            is_alive: false,
+            ..timed_out_player.clone()
+        });
+        
+        // Refresh alive players
+        players = ctx.db.lobby_player()
+            .lobby_id()
+            .filter(&lobby_id)
+            .filter(|p| p.is_alive)
+            .collect();
+        players.sort_by_key(|p| p.joined_at);
+        
+        // Check for winner after timeout
+        if players.len() == 1 {
+            let winner = &players[0];
+            ctx.db.lobby().id().update(Lobby {
+                status: "finished".to_string(),
+                winner_identity: Some(winner.identity),
+                winner_address: Some(winner.address.clone()),
+                updated_at: ctx.timestamp,
+                ..lobby
+            });
+            log::info!("Game finished by auto-timeout! Winner: {}", winner.name);
+            return; // Exit early
+        }
+        
+        if players.is_empty() {
+            panic!("No players left after timeout");
+        }
     }
 
     // Check if it's this player's turn
@@ -544,6 +603,8 @@ pub fn make_move(
         move_count: game_state.move_count + 1,
         last_move_at: ctx.timestamp,
         turn_deadline: new_deadline,
+        turn_lock_until: None, // Release lock
+        last_move_player: Some(ctx.sender), // Track last player
         ..game_state
     });
 }
