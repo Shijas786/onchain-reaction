@@ -47,12 +47,18 @@ app.get("/expiration-check", async (req, res) => {
 
 // Start background jobs
 function startBackgroundJobs() {
-    // Run health check every 5 minutes
+    // Run health check + auto-recovery every 5 minutes
     setInterval(async () => {
         try {
             console.log('\n' + '='.repeat(80));
             console.log('🔍 Running scheduled health check...');
-            await runHealthCheck();
+            const unhealthy = await runHealthCheck();
+
+            // Auto-recover unhealthy matches
+            if (unhealthy.length > 0) {
+                console.log('🔧 Starting auto-recovery...');
+                await runAutoRecovery(unhealthy);
+            }
         } catch (error) {
             console.error('[Background] Health check failed:', error);
         }
@@ -78,8 +84,8 @@ function startBackgroundJobs() {
     }, 2.5 * 60 * 1000); // Start after 2.5 minutes
 
     console.log('✅ Background jobs started:');
-    console.log('   - Health check: Every 5 minutes');
-    console.log('   - Expiration check: Every 5 minutes (offset)');
+    console.log('   - Health check + auto-recovery: Every 5 minutes');
+    console.log('   - Expiration check + auto-cancel: Every 5 minutes (offset)');
 }
 
 app.listen(PORT, () => {
