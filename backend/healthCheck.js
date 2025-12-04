@@ -1,6 +1,6 @@
 import { createPublicClient, http } from 'viem';
 import { base, arbitrum } from 'viem/chains';
-import { onchainReactionAbi } from '../lib/onchainReaction.js';
+import { onchainReactionAbi } from './abi.js';
 
 const CHAIN_CONFIG = {
     8453: { chain: base, rpc: 'https://mainnet.base.org' },
