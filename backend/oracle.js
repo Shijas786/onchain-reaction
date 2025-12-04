@@ -15,12 +15,12 @@ const CONFIG = {
     [CHAIN_IDS.BASE]: {
         chain: base,
         rpcUrl: "https://mainnet.base.org",
-        contractAddress: "0x426E2cA323fA707bd1921ECcce0a27aD7804b2A2" // NEW Base contract
+        contractAddress: "0x426E2cA323fA707bd1921ECcce0a27aD7804b2A2" // OnchainReactionBaseV3 (NEW)
     },
     [CHAIN_IDS.ARBITRUM]: {
         chain: arbitrum,
         rpcUrl: "https://arb-mainnet.g.alchemy.com/v2/eTjwZLPVQJs7qTv3Inh338N4Uss_z7OT",
-        contractAddress: "0x752267f970b1ddCF936F4EabA2d605B2d05167Eb" // NEW Arbitrum contract
+        contractAddress: "0x752267f970b1ddCF936F4EabA2d605B2d05167Eb" // New deployment (NEW)
     }
 };
 
@@ -206,14 +206,8 @@ export async function pollMatches() {
     setTimeout(pollMatches, 5000); // Poll every 5 seconds
 }
 
-// Export for use in index.js
-export function startOraclePolling() {
-    console.log("Oracle polling started!");
-    pollMatches();
-}
-
 // Start polling if run directly
 import { fileURLToPath } from 'url';
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    startOraclePolling();
+    pollMatches();
 }
