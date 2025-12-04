@@ -19,7 +19,7 @@ async function main() {
     try {
         const isAllowed = await publicClient.readContract({
             address: arenaAddress,
-            abi: ChainOrbArenaAbi,
+            abi: onchainReactionAbi,
             functionName: "allowedTokens",
             args: [usdcAddress],
         });
