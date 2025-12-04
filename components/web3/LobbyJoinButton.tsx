@@ -111,18 +111,19 @@ export function LobbyJoinButton({
                 // Check if lobby exists
                 const existingLobby = conn.db.lobby.id.find(lobbyId);
 
-                if (!existingLobby && match) {
+                if (!existingLobby && matchData) {
                   console.log('[LobbyJoinButton] Lobby not found in SpacetimeDB, creating it first...');
                   // Create the lobby first
                   try {
+                    const [host, token, entryFeeAmount, maxPlayers] = matchData as any;
                     conn.reducers.createLobby({
                       chainId,
-                      matchId: BigInt(match.matchId),
+                      matchId: BigInt(matchId),
                       arenaAddress,
-                      hostAddress: match.host,
-                      entryFee: match.entryFee.toString(),
-                      maxPlayers: match.maxPlayers,
-                      hostName: `${match.host.slice(0, 6)}...${match.host.slice(-4)}`,
+                      hostAddress: host,
+                      entryFee: entryFeeAmount.toString(),
+                      maxPlayers: Number(maxPlayers),
+                      hostName: `${host.slice(0, 6)}...${host.slice(-4)}`,
                       lobbyId,
                     });
                     // Wait a bit for lobby to be created
