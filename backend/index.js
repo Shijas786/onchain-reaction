@@ -3,6 +3,7 @@ import cors from "cors";
 import finishHandler from "./api/finish.js";
 import { runExpirationCheck } from "./expiration.js";
 import { runHealthCheck } from "./healthCheck.js";
+import { runAutoRecovery, autoCancelExpired } from "./recovery.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
