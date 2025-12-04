@@ -285,7 +285,3 @@ export function LobbyJoinButton({
     </div>
   );
 }
-
-  );
-}
-
