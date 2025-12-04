@@ -19,6 +19,9 @@ export default __t.object("GameState", {
   isAnimating: __t.bool(),
   moveCount: __t.u32(),
   lastMoveAt: __t.timestamp(),
+  turnDeadline: __t.timestamp(),
+  turnLockUntil: __t.option(__t.timestamp()),
+  lastMovePlayer: __t.option(__t.identity()),
 });
 
 
