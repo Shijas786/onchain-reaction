@@ -84,7 +84,7 @@ export async function finalizeMatchOnChain(
       abi: onchainReactionAbi,
       functionName: "matches",
       args: [lobby.matchId],
-    }) as [string, bigint, bigint, bigint, number, string];
+    }) as any;
 
     const onChainStatus = matchInfo[4]; // status enum index
 
@@ -147,7 +147,7 @@ export async function isMatchFinalizedOnChain(
       abi: onchainReactionAbi,
       functionName: "matches",
       args: [matchId],
-    }) as [string, bigint, bigint, bigint, number, string];
+    }) as any;
 
     const status = matchInfo[4];
     // Status 2 = Finished, 3 = PaidOut
