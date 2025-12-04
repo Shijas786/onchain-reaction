@@ -9,7 +9,7 @@ const ARENA_ADDRESS = "0x426E2cA323fA707bd1921ECcce0a27aD7804b2A2"; // OnchainRe
 const ORACLE_PK = process.env.ORACLE_PRIVATE_KEY as `0x${string}`;
 
 // Matches to cancel
-const MATCH_IDS = [34, 36];
+const MATCH_IDS = [15, 14]; // Match #15 is stuck Live (expired), Match #14 is Pending (expired)
 
 async function main() {
     if (!ORACLE_PK) throw new Error("Missing ORACLE_PRIVATE_KEY");
