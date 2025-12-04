@@ -1,7 +1,7 @@
 // config/index.tsx
-import { cookieStorage, createStorage } from 'wagmi' // Use 'wagmi' directly (Wagmi v2+)
+import { cookieStorage, createStorage, http } from 'wagmi' // Use 'wagmi' directly (Wagmi v2+)
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
-import { base, arbitrum } from '@reown/appkit/networks'
+import { base, arbitrum } from 'wagmi/chains' // ✅ USE WAGMI CHAINS, NOT APPKIT
 import type { Chain } from 'viem' // Import Chain type for explicit typing
 
 // Read Project ID from environment variables and trim any whitespace/newlines

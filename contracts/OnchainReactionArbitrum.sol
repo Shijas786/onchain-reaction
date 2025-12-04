@@ -1,24 +1,18 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// Arbitrum Network Contract
-contract OnchainReaction is Ownable {
+/// @title OnchainReactionArbitrum - Arbitrum deployment version (same game logic)
+contract OnchainReactionArbitrum is Ownable {
     using SafeERC20 for IERC20;
 
+    // Allowed tokens
     mapping(address => bool) public allowedTokens;
 
-    enum MatchStatus {
-        Pending,
-        Live,
-        Finished,
-        PaidOut,
-        Cancelled
-    }
+    enum MatchStatus { Pending, Live, Finished, PaidOut, Cancelled }
 
     struct Match {
         address host;
@@ -40,6 +34,7 @@ contract OnchainReaction is Ownable {
     mapping(uint256 => bool) public claimed;
 
     bool internal locked;
+
     modifier noReentrant() {
         require(!locked, "Reentrancy");
         locked = true;
@@ -50,8 +45,11 @@ contract OnchainReaction is Ownable {
     address public oracle;
     uint256 public feeBps = 50;
     address public feeRecipient;
-    uint256 public accumulatedFees;
 
+    // per-token fees
+    mapping(address => uint256) public accumulatedFees;
+
+    // EVENTS
     event MatchCreated(uint256 indexed matchId, address indexed host);
     event PlayerJoined(uint256 indexed matchId, address indexed player);
     event PlayerLeft(uint256 indexed matchId, address indexed player);
@@ -60,18 +58,18 @@ contract OnchainReaction is Ownable {
     event PrizeClaimed(uint256 indexed matchId, uint256 amount);
     event MatchCancelled(uint256 indexed matchId);
     event RefundClaimed(uint256 indexed matchId, address indexed player, uint256 amount);
+    event FeesWithdrawn(address indexed token, address indexed recipient, uint256 amount);
 
     constructor(address _feeRecipient) Ownable(msg.sender) {
         require(_feeRecipient != address(0), "Invalid fee recipient");
+
         feeRecipient = _feeRecipient;
 
-        // FIXED CHECKSUM ✔
-        allowedTokens[
-            0xaf88d065e77c8cC2239327C5EDb3A432268e5831
-        ] = true; // Arbitrum USDC
+        // ARBITRUM USDC
+        allowedTokens[0xaf88d065e77c8cC2239327C5EDb3A432268e5831] = true;
     }
 
-    // === MATCH CREATION ===
+    // MATCH CREATION
     function createMatch(
         address token,
         uint256 entryFee,
@@ -101,11 +99,14 @@ contract OnchainReaction is Ownable {
         emit MatchCreated(id, msg.sender);
     }
 
-    // === JOIN / LEAVE ===
+    function getPlayers(uint256 id) external view returns (address[] memory) {
+        return matchPlayers[id];
+    }
+
     function joinMatch(uint256 id) external noReentrant {
         Match storage m = matches[id];
         require(m.status == MatchStatus.Pending, "Not pending");
-        require(block.timestamp < m.expiresAt, "Expired");
+        require(block.timestamp < m.expiresAt, "Match expired");
         require(matchPlayers[id].length < m.maxPlayers, "Full");
         require(!isPlayerInMatch[id][msg.sender], "Already in");
 
@@ -120,7 +121,7 @@ contract OnchainReaction is Ownable {
 
     function leaveMatch(uint256 id) external noReentrant {
         Match storage m = matches[id];
-        require(m.status == MatchStatus.Pending, "Already live");
+        require(m.status == MatchStatus.Pending, "Already started");
         require(isPlayerInMatch[id][msg.sender], "Not in match");
         require(msg.sender != m.host, "Host cannot leave");
 
@@ -140,11 +141,10 @@ contract OnchainReaction is Ownable {
         emit PlayerLeft(id, msg.sender);
     }
 
-    // === START / FINISH ===
     function startMatch(uint256 id) external {
         Match storage m = matches[id];
         require(msg.sender == m.host, "Not host");
-        require(m.status == MatchStatus.Pending, "Already started");
+        require(m.status == MatchStatus.Pending, "Wrong status");
         require(matchPlayers[id].length >= 2, "Need 2 players");
 
         m.status = MatchStatus.Live;
@@ -156,7 +156,7 @@ contract OnchainReaction is Ownable {
         Match storage m = matches[id];
         require(msg.sender == oracle || msg.sender == owner(), "Not oracle");
         require(m.status == MatchStatus.Live, "Not live");
-        require(isPlayerInMatch[id][winner], "Winner not player");
+        require(isPlayerInMatch[id][winner], "Invalid winner");
 
         m.status = MatchStatus.Finished;
         m.winner = winner;
@@ -164,12 +164,11 @@ contract OnchainReaction is Ownable {
         emit MatchFinished(id, winner);
     }
 
-    // === CLAIM PRIZE ===
     function claimPrize(uint256 id) external noReentrant {
         Match storage m = matches[id];
         require(m.status == MatchStatus.Finished, "Not finished");
         require(m.winner == msg.sender, "Not winner");
-        require(!claimed[id], "Claimed");
+        require(!claimed[id], "Already claimed");
 
         claimed[id] = true;
         m.status = MatchStatus.PaidOut;
@@ -177,26 +176,22 @@ contract OnchainReaction is Ownable {
         uint256 fee = (m.prizePool * feeBps) / 10000;
         uint256 prize = m.prizePool - fee;
 
-        accumulatedFees += fee;
+        accumulatedFees[m.token] += fee;
 
         IERC20(m.token).safeTransfer(msg.sender, prize);
 
         emit PrizeClaimed(id, prize);
     }
 
-    // === REFUNDS ===
-    /// Claim refund if match expired before starting (status still Pending)
     function claimExpiredRefund(uint256 id) external noReentrant {
         Match storage m = matches[id];
         require(m.status == MatchStatus.Pending, "Match started");
         require(block.timestamp >= m.expiresAt, "Not expired");
         require(isPlayerInMatch[id][msg.sender], "Not in match");
 
-        // Remove player
         isPlayerInMatch[id][msg.sender] = false;
         m.prizePool -= m.entryFee;
 
-        // Remove from players array
         address[] storage arr = matchPlayers[id];
         for (uint256 i; i < arr.length; i++) {
             if (arr[i] == msg.sender) {
@@ -206,47 +201,37 @@ contract OnchainReaction is Ownable {
             }
         }
 
-        // Refund
         IERC20(m.token).safeTransfer(msg.sender, m.entryFee);
 
         emit RefundClaimed(id, msg.sender, m.entryFee);
 
-        // Cancel match if no players left
         if (matchPlayers[id].length == 0) {
             m.status = MatchStatus.Cancelled;
             emit MatchCancelled(id);
         }
     }
 
-    /// Emergency cancel match (only owner/oracle) - refunds all players
     function emergencyCancelMatch(uint256 id) external noReentrant {
         Match storage m = matches[id];
         require(msg.sender == oracle || msg.sender == owner(), "Not authorized");
         require(m.status == MatchStatus.Pending || m.status == MatchStatus.Live, "Cannot cancel");
-        require(matchPlayers[id].length > 0, "No players");
 
         address[] memory players = matchPlayers[id];
-        uint256 refundAmount = m.entryFee;
-        
-        // Cancel match
-        m.status = MatchStatus.Cancelled;
-        
-        // Refund all players
+
         for (uint256 i; i < players.length; i++) {
             if (isPlayerInMatch[id][players[i]]) {
                 isPlayerInMatch[id][players[i]] = false;
-                IERC20(m.token).safeTransfer(players[i], refundAmount);
-                emit RefundClaimed(id, players[i], refundAmount);
+                IERC20(m.token).safeTransfer(players[i], m.entryFee);
             }
         }
 
-        // Clear prize pool
         m.prizePool = 0;
+        m.status = MatchStatus.Cancelled;
 
         emit MatchCancelled(id);
     }
 
-    // === ADMIN ===
+    // ADMIN
     function setOracle(address o) external onlyOwner {
         oracle = o;
     }
@@ -260,17 +245,14 @@ contract OnchainReaction is Ownable {
         allowedTokens[token] = allowed;
     }
 
-    function withdrawFees() external {
+    function withdrawFees(address token) external {
         require(msg.sender == feeRecipient, "Not recipient");
 
-        uint256 amt = accumulatedFees;
-        accumulatedFees = 0;
+        uint256 amt = accumulatedFees[token];
+        accumulatedFees[token] = 0;
 
-        IERC20(
-            0xaf88d065e77c8cC2239327C5EDb3A432268e5831
-        ).safeTransfer(feeRecipient, amt);
+        IERC20(token).safeTransfer(feeRecipient, amt);
+
+        emit FeesWithdrawn(token, feeRecipient, amt);
     }
 }
-
-
-

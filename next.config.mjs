@@ -8,7 +8,6 @@ const nextConfig = {
       },
     ],
   },
-  transpilePackages: ['spacetimedb'], // Fix TypeScript compilation
 };
 
 export default nextConfig;

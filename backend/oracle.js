@@ -158,19 +158,22 @@ export async function pollMatches() {
 
                 const contractAddress = CONFIG[lobby.chainId].contractAddress;
 
-                // We can check if match is active on chain
-                const isMatchActive = await client.public.readContract({
+                // Check match status on chain (status: 0=Pending, 1=Live, 2=Finished, 3=PaidOut, 4=Cancelled)
+                const match = await client.public.readContract({
                     address: contractAddress,
                     abi: onchainReactionAbi,
-                    functionName: "isMatchActive",
+                    functionName: "matches",
                     args: [BigInt(lobby.matchId)]
                 });
 
-                if (isMatchActive) {
-                    console.log(`Match ${lobby.matchId} finished in DB but active on chain ${lobby.chainId}. Settling...`);
+                const matchStatus = match[5]; // status is 6th element (index 5)
+
+                // If match is Live (status=1), finalize it
+                if (matchStatus === 1) {
+                    console.log(`Match ${lobby.matchId} finished in DB but still Live on chain ${lobby.chainId}. Settling...`);
                     await finishMatch(lobby.chainId, lobby.matchId, lobby.winnerAddress);
                 } else {
-                    // console.log(`Match ${lobby.matchId} already settled.`);
+                    // console.log(`Match ${lobby.matchId} already settled (status=${matchStatus}).`);
                 }
             }
 

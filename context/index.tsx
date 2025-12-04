@@ -7,8 +7,7 @@ import { WagmiProvider, cookieToInitialState, type Config } from 'wagmi'
 import { createAppKit } from '@reown/appkit/react'
 // Import config, networks, projectId, and wagmiAdapter from your config file
 import { config, networks, projectId, wagmiAdapter } from '@/config'
-// Import the default network separately if needed
-import { base } from '@reown/appkit/networks'
+import { base } from 'wagmi/chains' // ✅ USE WAGMI CHAIN
 
 const queryClient = new QueryClient()
 
@@ -54,4 +53,5 @@ export default function ContextProvider({
     </WagmiProvider>
   )
 }
+
 

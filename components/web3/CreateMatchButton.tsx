@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient, useReadContract, useSwitchChain } from "wagmi";
-import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
+import { onchainReactionAbi } from "@/lib/onchainReaction";
 import ERC20Abi from "@/abi/ERC20.json";
 import { ARENA_ADDRESSES, parseUSDC, ENTRY_FEE_OPTIONS, MAX_PLAYERS_OPTIONS, getChainName, CHAIN_IDS, USDC_ADDRESSES, TOKENS, parseTokenAmount, formatTokenAmount } from "@/lib/contracts";
 import { decodeEventLog } from "viem";
@@ -337,7 +337,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     try {
       const hash = await writeContractAsync({
         address: arenaAddress,
-        abi: ChainOrbArenaAbi,
+        abi: onchainReactionAbi,
         functionName: "createMatch",
         args: [tokenAddress, entryFeeWei, BigInt(maxPlayers)],
         chainId: selectedChain,
@@ -352,7 +352,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
       const matchCreatedLog = receipt.logs.find(log => {
         try {
           const decoded = decodeEventLog({
-            abi: ChainOrbArenaAbi,
+            abi: onchainReactionAbi,
             data: log.data,
             topics: log.topics,
           });
@@ -364,7 +364,7 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
 
       if (matchCreatedLog) {
         const decoded = decodeEventLog({
-          abi: ChainOrbArenaAbi,
+          abi: onchainReactionAbi,
           data: matchCreatedLog.data,
           topics: matchCreatedLog.topics,
         });

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useLobby, useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 import { useVisualBoard } from "@/hooks/useVisualBoard";
 import { formatUSDC, formatPrize, ARENA_ADDRESSES } from "@/lib/contracts";
-import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
+import { onchainReactionAbi } from "@/lib/onchainReaction";
 import { motion, AnimatePresence } from "framer-motion";
 import { Board, Player, PlayerColor as GamePlayerColor } from "@/types/game";
 import { getMaxCapacity } from "@/lib/gameLogic";

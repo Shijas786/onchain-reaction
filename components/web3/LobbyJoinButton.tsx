@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain, usePublicClient } from "wagmi";
-import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
+import { onchainReactionAbi } from "@/lib/onchainReaction";
 import ERC20Abi from "@/abi/ERC20.json";
 import { USDC_ADDRESSES, parseUSDC, parseTokenAmount } from "@/lib/contracts";
 import { useLobby } from "@/hooks/useSpacetimeDB";
@@ -188,7 +188,7 @@ export function LobbyJoinButton({
     try {
       const hash = await writeContractAsync({
         address: arenaAddress,
-        abi: ChainOrbArenaAbi,
+        abi: onchainReactionAbi,
         functionName: "joinMatch",
         args: [BigInt(matchId)],
         chainId,
@@ -283,6 +283,9 @@ export function LobbyJoinButton({
         </p>
       )}
     </div>
+  );
+}
+
   );
 }
 

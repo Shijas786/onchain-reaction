@@ -1,7 +1,7 @@
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
 import { ARENA_ADDRESSES, CHAIN_IDS, USDC_ADDRESSES } from "../lib/contracts";
-import ChainOrbArenaAbi from "../abi/ChainOrbArena.json";
+import { onchainReactionAbi } from "../lib/onchainReaction";
 
 async function main() {
     const rpcUrl = "https://mainnet.base.org";

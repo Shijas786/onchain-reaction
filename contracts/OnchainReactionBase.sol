@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// Base Network Contract
-contract OnchainReaction is Ownable {
+/// @title OnchainReactionBaseV3 - Non-upgradeable version with per-token fees (no forceRefund)
+contract OnchainReactionBaseV3 is Ownable {
     using SafeERC20 for IERC20;
+
+    // ------------------------
+    // STORAGE
+    // ------------------------
 
     mapping(address => bool) public allowedTokens;
 
@@ -48,9 +51,15 @@ contract OnchainReaction is Ownable {
     }
 
     address public oracle;
-    uint256 public feeBps = 50;
+    uint256 public feeBps = 50; // 0.5%
     address public feeRecipient;
-    uint256 public accumulatedFees;
+
+    // ✅ per-token accumulated fees
+    mapping(address => uint256) public accumulatedFees;
+
+    // ------------------------
+    // EVENTS
+    // ------------------------
 
     event MatchCreated(uint256 indexed matchId, address indexed host);
     event PlayerJoined(uint256 indexed matchId, address indexed player);
@@ -60,23 +69,34 @@ contract OnchainReaction is Ownable {
     event PrizeClaimed(uint256 indexed matchId, uint256 amount);
     event MatchCancelled(uint256 indexed matchId);
     event RefundClaimed(uint256 indexed matchId, address indexed player, uint256 amount);
+    event FeesWithdrawn(address indexed token, address indexed recipient, uint256 amount);
+
+    // ------------------------
+    // CONSTRUCTOR
+    // ------------------------
 
     constructor(address _feeRecipient) Ownable(msg.sender) {
         require(_feeRecipient != address(0), "Invalid fee recipient");
         feeRecipient = _feeRecipient;
 
-        // ADDING ALLOWED BASE TOKENS HERE
-        allowedTokens[
-            0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-        ] = true; // Base USDC ✔
-        allowedTokens[
-            0x50F88fe97f72CD3E75b9Eb4f747F59BcEBA80d59
-        ] = true; // JESSE Token ✔
+        // Base USDC
+        allowedTokens[0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913] = true;
+        // JESSE token
+        allowedTokens[0x50F88fe97f72CD3E75b9Eb4f747F59BcEBA80d59] = true;
+    }
+
+    // ------------------------
+    // VIEW
+    // ------------------------
+
+    function getPlayers(uint256 id) external view returns (address[] memory) {
+        return matchPlayers[id];
     }
 
     // ------------------------
     // MATCH CREATION
     // ------------------------
+
     function createMatch(
         address token,
         uint256 entryFee,
@@ -106,13 +126,10 @@ contract OnchainReaction is Ownable {
         emit MatchCreated(id, msg.sender);
     }
 
-    function getPlayers(uint256 id) external view returns (address[] memory) {
-        return matchPlayers[id];
-    }
-
     // ------------------------
     // JOIN / LEAVE MATCH
     // ------------------------
+
     function joinMatch(uint256 id) external noReentrant {
         Match storage m = matches[id];
         require(m.status == MatchStatus.Pending, "Not pending");
@@ -156,6 +173,7 @@ contract OnchainReaction is Ownable {
     // ------------------------
     // START / FINISH MATCH
     // ------------------------
+
     function startMatch(uint256 id) external {
         Match storage m = matches[id];
         require(msg.sender == m.host, "Not host");
@@ -182,6 +200,7 @@ contract OnchainReaction is Ownable {
     // ------------------------
     // CLAIM PRIZE
     // ------------------------
+
     function claimPrize(uint256 id) external noReentrant {
         Match storage m = matches[id];
         require(m.status == MatchStatus.Finished, "Not finished");
@@ -194,7 +213,8 @@ contract OnchainReaction is Ownable {
         uint256 fee = (m.prizePool * feeBps) / 10000;
         uint256 prize = m.prizePool - fee;
 
-        accumulatedFees += fee;
+        // per-token fee tracking
+        accumulatedFees[m.token] += fee;
 
         IERC20(m.token).safeTransfer(msg.sender, prize);
 
@@ -204,6 +224,7 @@ contract OnchainReaction is Ownable {
     // ------------------------
     // REFUNDS
     // ------------------------
+
     /// Claim refund if match expired before starting (status still Pending)
     function claimExpiredRefund(uint256 id) external noReentrant {
         Match storage m = matches[id];
@@ -246,10 +267,10 @@ contract OnchainReaction is Ownable {
 
         address[] memory players = matchPlayers[id];
         uint256 refundAmount = m.entryFee;
-        
+
         // Cancel match
         m.status = MatchStatus.Cancelled;
-        
+
         // Refund all players
         for (uint256 i; i < players.length; i++) {
             if (isPlayerInMatch[id][players[i]]) {
@@ -268,6 +289,7 @@ contract OnchainReaction is Ownable {
     // ------------------------
     // ADMIN
     // ------------------------
+
     function setOracle(address o) external onlyOwner {
         oracle = o;
     }
@@ -281,12 +303,20 @@ contract OnchainReaction is Ownable {
         allowedTokens[token] = allowed;
     }
 
+    // ------------------------
+    // FEE WITHDRAWAL
+    // ------------------------
+
     function withdrawFees(address token) external {
         require(msg.sender == feeRecipient, "Not recipient");
 
-        uint256 amt = accumulatedFees;
-        accumulatedFees = 0;
+        uint256 amt = accumulatedFees[token];
+        require(amt > 0, "No fees");
+
+        accumulatedFees[token] = 0;
 
         IERC20(token).safeTransfer(feeRecipient, amt);
+
+        emit FeesWithdrawn(token, feeRecipient, amt);
     }
 }

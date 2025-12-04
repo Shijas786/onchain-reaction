@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
-import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
+import { onchainReactionAbi } from "@/lib/onchainReaction";
 import { formatUSDC, getChainName, formatTokenAmount } from "@/lib/contracts";
 
 interface Prize {
@@ -30,7 +30,7 @@ export function ClaimPrizeButton({ prize, onSuccess }: ClaimPrizeButtonProps) {
   // Fetch match details to get token address
   const { data: matchData } = useReadContract({
     address: prize.arenaAddress as `0x${string}`,
-    abi: ChainOrbArenaAbi,
+    abi: onchainReactionAbi,
     functionName: "matches",
     args: [BigInt(prize.matchId)],
     chainId: prize.chainId,
@@ -47,7 +47,7 @@ export function ClaimPrizeButton({ prize, onSuccess }: ClaimPrizeButtonProps) {
     try {
       const hash = await writeContractAsync({
         address: prize.arenaAddress as `0x${string}`,
-        abi: ChainOrbArenaAbi,
+        abi: onchainReactionAbi,
         functionName: "claimPrize",
         args: [BigInt(prize.matchId)],
         chainId: prize.chainId,
@@ -61,7 +61,7 @@ export function ClaimPrizeButton({ prize, onSuccess }: ClaimPrizeButtonProps) {
 
   const { data: isClaimedOnChain } = useReadContract({
     address: prize.arenaAddress as `0x${string}`,
-    abi: ChainOrbArenaAbi,
+    abi: onchainReactionAbi,
     functionName: "claimed",
     args: [BigInt(prize.matchId)],
     chainId: prize.chainId,
@@ -111,7 +111,7 @@ export function PrizeCard({ prize, onClaimed }: PrizeCardProps) {
   // Fetch match details to get token address
   const { data: matchData } = useReadContract({
     address: prize.arenaAddress as `0x${string}`,
-    abi: ChainOrbArenaAbi,
+    abi: onchainReactionAbi,
     functionName: "matches",
     args: [BigInt(prize.matchId)],
     chainId: prize.chainId,

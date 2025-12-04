@@ -6,7 +6,7 @@
 import { createPublicClient, createWalletClient, http, decodeEventLog } from "viem";
 import { base, arbitrum } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
-import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
+import { onchainReactionAbi } from "@/lib/onchainReaction";
 import { ARENA_ADDRESSES, CHAIN_IDS } from "@/lib/contracts";
 import type { Lobby } from "./types";
 
@@ -42,7 +42,7 @@ function createClients(chainId: number, config: OracleConfig) {
   });
 
   const account = privateKeyToAccount(config.privateKey);
-  
+
   const walletClient = createWalletClient({
     chain,
     transport,
@@ -71,7 +71,7 @@ export async function finalizeMatchOnChain(
 
     const chainId = lobby.chainId;
     const arenaAddress = ARENA_ADDRESSES[chainId];
-    
+
     if (!arenaAddress || arenaAddress === "0x0000000000000000000000000000000000000000") {
       return { success: false, error: "Arena contract not deployed on this chain" };
     }
@@ -81,13 +81,13 @@ export async function finalizeMatchOnChain(
     // Check current match status on-chain
     const matchInfo = await publicClient.readContract({
       address: arenaAddress,
-      abi: ChainOrbArenaAbi,
+      abi: onchainReactionAbi,
       functionName: "matches",
       args: [lobby.matchId],
     }) as [string, bigint, bigint, bigint, number, string];
 
     const onChainStatus = matchInfo[4]; // status enum index
-    
+
     // Status: 0=Pending, 1=Live, 2=Finished, 3=PaidOut, 4=Cancelled
     if (onChainStatus >= 2) {
       return { success: false, error: "Match already finalized on-chain" };
@@ -96,7 +96,7 @@ export async function finalizeMatchOnChain(
     // Simulate the transaction first
     const { request } = await publicClient.simulateContract({
       address: arenaAddress,
-      abi: ChainOrbArenaAbi,
+      abi: onchainReactionAbi,
       functionName: "finishMatch",
       args: [lobby.matchId, lobby.winnerAddress as `0x${string}`],
       account,
@@ -116,9 +116,9 @@ export async function finalizeMatchOnChain(
     }
   } catch (error: any) {
     console.error("Failed to finalize match:", error);
-    return { 
-      success: false, 
-      error: error?.shortMessage || error?.message || "Unknown error" 
+    return {
+      success: false,
+      error: error?.shortMessage || error?.message || "Unknown error"
     };
   }
 }
@@ -144,7 +144,7 @@ export async function isMatchFinalizedOnChain(
 
     const matchInfo = await publicClient.readContract({
       address: arenaAddress,
-      abi: ChainOrbArenaAbi,
+      abi: onchainReactionAbi,
       functionName: "matches",
       args: [matchId],
     }) as [string, bigint, bigint, bigint, number, string];
@@ -174,9 +174,9 @@ export class WinnerSyncService {
    */
   async processFinishedLobby(lobby: Lobby): Promise<void> {
     console.log(`Processing finished lobby: ${lobby.id}`);
-    
+
     const result = await finalizeMatchOnChain(lobby, this.oracleConfig);
-    
+
     if (result.success) {
       console.log(`Successfully finalized match ${lobby.matchId} on chain ${lobby.chainId}`);
       // TODO: Update SpacetimeDB to mark as synced
@@ -193,12 +193,12 @@ export class WinnerSyncService {
   async start(): Promise<void> {
     if (this.isRunning) return;
     this.isRunning = true;
-    
+
     console.log("Winner sync service started");
-    
+
     // TODO: Connect to SpacetimeDB and subscribe to lobby table
     // When a lobby status changes to "finished", call processFinishedLobby
-    
+
     // Example pseudo-code:
     // const client = await connectToSpacetimeDB();
     // client.db.lobby.onUpdate((oldLobby, newLobby) => {

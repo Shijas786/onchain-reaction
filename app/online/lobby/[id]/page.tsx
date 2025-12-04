@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { DoodleBackground } from "@/components/ui/DoodleBackground";
 import { LobbyJoinButton } from "@/components/web3/LobbyJoinButton";
 import { motion } from "framer-motion";
-import ChainOrbArenaAbi from "@/abi/ChainOrbArena.json";
+import { onchainReactionAbi } from "@/lib/onchainReaction";
 import { ARENA_ADDRESSES, CHAIN_IDS, getChainName, formatUSDC, parseUSDC, formatTokenAmount, BASE_JESSE } from "@/lib/contracts";
 import { formatRoomCode } from "@/lib/roomCode";
 import { useLobby } from "@/hooks/useSpacetimeDB";
