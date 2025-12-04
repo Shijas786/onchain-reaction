@@ -206,8 +206,14 @@ export async function pollMatches() {
     setTimeout(pollMatches, 5000); // Poll every 5 seconds
 }
 
+// Export for use in index.js
+export function startOraclePolling() {
+    console.log("Oracle polling started!");
+    pollMatches();
+}
+
 // Start polling if run directly
 import { fileURLToPath } from 'url';
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    pollMatches();
+    startOraclePolling();
 }
