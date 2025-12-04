@@ -72,7 +72,7 @@ function LobbyContent() {
   // Read match info from contract
   const { data: matchInfo, refetch: refetchMatch } = useReadContract({
     address: arenaAddress,
-    abi: ChainOrbArenaAbi,
+    abi: onchainReactionAbi,
     functionName: "matches",
     args: [BigInt(matchId !== -1 ? matchId : 0)],
     chainId,
@@ -84,7 +84,7 @@ function LobbyContent() {
   // Read players from contract
   const { data: contractPlayers, refetch: refetchPlayers } = useReadContract({
     address: arenaAddress,
-    abi: ChainOrbArenaAbi,
+    abi: onchainReactionAbi,
     functionName: "getPlayers",
     args: [BigInt(matchId !== -1 ? matchId : 0)],
     chainId,
@@ -96,7 +96,7 @@ function LobbyContent() {
   // Check if current user has joined
   const { data: isPlayerInMatch } = useReadContract({
     address: arenaAddress,
-    abi: ChainOrbArenaAbi,
+    abi: onchainReactionAbi,
     functionName: "isPlayerInMatch",
     args: [BigInt(matchId !== -1 ? matchId : 0), address],
     chainId,
@@ -249,7 +249,7 @@ function LobbyContent() {
 
           const hash = await writeContractAsync({
             address: arenaAddress,
-            abi: ChainOrbArenaAbi,
+            abi: onchainReactionAbi,
             functionName: "startMatch",
             args: [BigInt(matchId)],
             chainId,
@@ -294,7 +294,7 @@ function LobbyContent() {
     try {
       const hash = await writeContractAsync({
         address: arenaAddress,
-        abi: ChainOrbArenaAbi,
+        abi: onchainReactionAbi,
         functionName: "startMatch",
         args: [BigInt(matchId)],
         chainId,
