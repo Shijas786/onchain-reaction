@@ -18,8 +18,8 @@ export const BASE_JESSE = "0x50F88fe97f72CD3E75b9Eb4f747F59BcEBA80d59";
 
 // ChainOrbArena contract addresses per chain
 export const ARENA_ADDRESSES: Record<number, `0x${string}`> = {
-  [CHAIN_IDS.BASE]: '0x7B04eb09b6748097067c7C9d97C545ADDFD7C97E', // Base mainnet
-  [CHAIN_IDS.ARBITRUM]: '0x859Bf3A3DD44D7607A7121ab1807F6BF90d7E86c', // Arbitrum mainnet
+  [CHAIN_IDS.BASE]: '0x426E2cA323fA707bd1921ECcce0a27aD7804b2A2', // Base mainnet - NEW
+  [CHAIN_IDS.ARBITRUM]: '0x752267f970b1ddCF936F4EabA2d605B2d05167Eb', // Arbitrum mainnet - NEW
 }
 
 // Chain config for viem

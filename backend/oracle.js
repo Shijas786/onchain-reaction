@@ -15,12 +15,12 @@ const CONFIG = {
     [CHAIN_IDS.BASE]: {
         chain: base,
         rpcUrl: "https://mainnet.base.org",
-        contractAddress: "0x7B04eb09b6748097067c7C9d97C545ADDFD7C97E"
+        contractAddress: "0x426E2cA323fA707bd1921ECcce0a27aD7804b2A2" // NEW Base contract
     },
     [CHAIN_IDS.ARBITRUM]: {
         chain: arbitrum,
         rpcUrl: "https://arb-mainnet.g.alchemy.com/v2/eTjwZLPVQJs7qTv3Inh338N4Uss_z7OT",
-        contractAddress: "0x859Bf3A3DD44D7607A7121ab1807F6BF90d7E86c"
+        contractAddress: "0x752267f970b1ddCF936F4EabA2d605B2d05167Eb" // NEW Arbitrum contract
     }
 };
 
