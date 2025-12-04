@@ -130,6 +130,13 @@ function LobbyContent() {
     const updateTimer = () => {
       const now = Date.now() / 1000;
       const expiresAt = Number((matchInfo as any)[8]); // expiresAt is at index 8
+
+      // Handle undefined or invalid expiresAt
+      if (!expiresAt || isNaN(expiresAt)) {
+        setTimeUntilExpiration(null);
+        return;
+      }
+
       const remaining = Math.max(0, expiresAt - now);
       setTimeUntilExpiration(remaining);
     };
