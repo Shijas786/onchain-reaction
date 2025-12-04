@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Board, Player, PlayerColor as GamePlayerColor } from "@/types/game";
 import { getMaxCapacity } from "@/lib/gameLogic";
 import { soundManager } from "@/lib/sound";
+import { useFinishMatch } from "@/hooks/useFinishMatch";
 
 function TimerDisplay({
   turnDeadline,
@@ -169,35 +170,30 @@ function OnlineGameContent() {
   }, [lastMove, players, animateMove]);
 
   const [showWinModal, setShowWinModal] = useState(false);
-  const [hasTriggeredOracle, setHasTriggeredOracle] = useState(false);
+  const { finishMatch } = useFinishMatch();
+  const [hasTriggeredFinalize, setHasTriggeredFinalize] = useState(false);
 
-
-  // Check for winner and trigger oracle
+  // Check for winner and trigger backend finalization
   useEffect(() => {
-    if (lobby?.status === "finished" && lobby.winnerAddress) {
+    if (lobby?.status === "finished" && lobby.winnerAddress && !hasTriggeredFinalize) {
       setShowWinModal(true);
+      setHasTriggeredFinalize(true);
 
-      // Trigger Oracle if not already done
-      if (!hasTriggeredOracle) {
-        setHasTriggeredOracle(true);
-        const oracleUrl = process.env.NEXT_PUBLIC_ORACLE_API_URL;
-        if (oracleUrl) {
-
-          fetch(oracleUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: String(lobby.matchId),
-              winner: lobby.winnerAddress
-            })
-          })
-            .then(res => res.json())
-
-            .catch(err => console.error("Oracle trigger failed:", err));
+      // Call backend to finalize match on-chain
+      console.log(`[Game] Finalizing match ${lobby.matchId} on chain ${chainId}`);
+      finishMatch({
+        chainId,
+        matchId: lobby.matchId,
+        winner: lobby.winnerAddress,
+      }).then(result => {
+        if (result.success) {
+          console.log(`[Game] ✅ Match finalized! Tx: ${result.txHash}`);
+        } else {
+          console.error(`[Game] ❌ Failed to finalize:`, result.error);
         }
-      }
+      });
     }
-  }, [lobby?.status, lobby?.winnerAddress, hasTriggeredOracle, lobby?.matchId]);
+  }, [lobby?.status, lobby?.winnerAddress, lobby?.matchId, chainId, hasTriggeredFinalize, finishMatch]);
 
   // Handle cell click
   const handleCellClick = async (row: number, col: number) => {
