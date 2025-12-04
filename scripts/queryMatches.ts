@@ -2,7 +2,7 @@
 import { createPublicClient, http, parseAbi } from 'viem';
 import { base } from 'viem/chains';
 
-const ARENA_ADDRESS = '0x7B04eb09b6748097067c7C9d97C545ADDFD7C97E';
+const ARENA_ADDRESS = '0x426E2cA323fA707bd1921ECcce0a27aD7804b2A2'; // OnchainReactionBaseV3
 
 const abi = parseAbi([
     'function matches(uint256) view returns (address host, address token, uint256 entryFee, uint256 maxPlayers, uint256 prizePool, uint8 status, address winner, uint256 createdAt, uint256 expiresAt)'

@@ -2,7 +2,7 @@
 import { createPublicClient, http, parseAbi } from 'viem';
 import { base } from 'viem/chains';
 
-const ARENA_ADDRESS = '0x7B04eb09b6748097067c7C9d97C545ADDFD7C97E';
+const ARENA_ADDRESS = '0x426E2cA323fA707bd1921ECcce0a27aD7804b2A2'; // OnchainReactionBaseV3
 const HOST_ADDRESS = '0x6C31212a23040998E1D1c157ACe3982aBDBE3154';
 
 const abi = parseAbi([
