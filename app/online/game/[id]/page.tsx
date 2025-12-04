@@ -183,7 +183,7 @@ function OnlineGameContent() {
       console.log(`[Game] Finalizing match ${lobby.matchId} on chain ${chainId}`);
       finishMatch({
         chainId,
-        matchId: lobby.matchId,
+        matchId: Number(lobby.matchId), // Convert bigint to number
         winner: lobby.winnerAddress,
       }).then(result => {
         if (result.success) {
