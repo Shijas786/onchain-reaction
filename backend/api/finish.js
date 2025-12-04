@@ -1,31 +1,67 @@
 import { finishMatch } from "../oracle.js";
 
-// Forced update: 2025-12-01 19:30
-
-async function handler(req, res) {
-    console.log("REQ BODY:", req.body);
-
-    const { id, winner } = req.body;
-
-    if (!id || !winner) {
-        console.log("Missing fields");
-        return res.status(400).json({ error: "Missing id or winner" });
+/**
+ * POST /finish
+ * Body: { chainId: number, matchId: number, winner: address }
+ * 
+ * Called by frontend when game ends.
+ * Oracle backend finalizes the match on-chain.
+ */
+export default async function finishHandler(req, res) {
+    // Only accept POST
+    if (req.method !== "POST") {
+        return res.status(405).json({ error: "Method not allowed" });
     }
 
     try {
-        console.log("Calling finishMatch:", id, winner);
+        const { chainId, matchId, winner } = req.body;
 
-        // Note: finishMatch in oracle.js handles the transaction and waiting
-        const result = await finishMatch(id, winner);
+        // Validate inputs
+        if (!chainId || !matchId || !winner) {
+            return res.status(400).json({
+                error: "Missing required fields: chainId, matchId, winner"
+            });
+        }
 
-        console.log("FINISHED MATCH", id);
-        console.log("TX:", result.txHash);
+        // Validate chain ID
+        if (chainId !== 8453 && chainId !== 42161) {
+            return res.status(400).json({
+                error: "Invalid chainId. Must be 8453 (Base) or 42161 (Arbitrum)"
+            });
+        }
 
-        return res.json({ ok: true, tx: result.txHash });
-    } catch (err) {
-        console.log("FINISH ERROR:", err);
-        return res.status(500).json({ error: err.toString() });
+        // Validate winner address
+        if (!/^0x[a-fA-F0-9]{40}$/.test(winner)) {
+            return res.status(400).json({
+                error: "Invalid winner address format"
+            });
+        }
+
+        console.log(`[FINISH] Received request: Chain ${chainId}, Match ${matchId}, Winner ${winner}`);
+
+        // Call oracle to finalize match
+        const result = await finishMatch(chainId, matchId, winner);
+
+        if (result.success) {
+            console.log(`[FINISH] ✅ Match ${matchId} finalized successfully. Tx: ${result.txHash}`);
+            return res.status(200).json({
+                success: true,
+                txHash: result.txHash,
+                message: `Match ${matchId} finalized on chain ${chainId}`
+            });
+        } else {
+            console.error(`[FINISH] ❌ Failed to finalize match ${matchId}:`, result.error);
+            return res.status(500).json({
+                success: false,
+                error: result.error || "Failed to finalize match"
+            });
+        }
+
+    } catch (error) {
+        console.error("[FINISH] Error:", error);
+        return res.status(500).json({
+            success: false,
+            error: error.message || "Internal server error"
+        });
     }
 }
-
-export default handler;
