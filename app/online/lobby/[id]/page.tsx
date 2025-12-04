@@ -48,6 +48,7 @@ function LobbyContent() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [hasJoined, setHasJoined] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [timeUntilExpiration, setTimeUntilExpiration] = useState<number | null>(null);
 
   // SpacetimeDB lobby hook
   const {
@@ -121,6 +122,22 @@ function LobbyContent() {
   // Determine token details
   const tokenSymbol = match?.token?.toLowerCase() === BASE_JESSE.toLowerCase() ? 'JESSE' : 'USDC';
   const tokenDecimals = tokenSymbol === 'JESSE' ? 18 : 6;
+
+  // Countdown timer for match expiration
+  useEffect(() => {
+    if (!matchInfo) return;
+
+    const updateTimer = () => {
+      const now = Date.now() / 1000;
+      const expiresAt = Number((matchInfo as any)[8]); // expiresAt is at index 8
+      const remaining = Math.max(0, expiresAt - now);
+      setTimeUntilExpiration(remaining);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [matchInfo]);
 
   // Create SpacetimeDB lobby if it doesn't exist (for existing matches)
   useEffect(() => {
@@ -358,6 +375,26 @@ function LobbyContent() {
               {statusText}
             </span>
           </div>
+
+          {/* Countdown Timer */}
+          {timeUntilExpiration !== null && lobbyStatus === "waiting" && (
+            <div className={`mt-3 px-4 py-2 rounded-xl border-2 inline-block ${timeUntilExpiration < 300 // 5 minutes
+              ? "bg-red-50 border-red-300 text-red-700 animate-pulse"
+              : "bg-blue-50 border-blue-300 text-blue-700"
+              }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">⏰</span>
+                <div>
+                  <p className="text-xs font-semibold uppercase">
+                    {timeUntilExpiration < 300 ? "⚠️ Expiring Soon!" : "Time Remaining"}
+                  </p>
+                  <p className="text-xl font-black font-mono">
+                    {Math.floor(timeUntilExpiration / 60)}:{String(Math.floor(timeUntilExpiration % 60)).padStart(2, '0')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Prize Info */}
