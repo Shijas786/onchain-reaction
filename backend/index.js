@@ -72,10 +72,10 @@ function startBackgroundJobs() {
                 console.log('⏰ Running scheduled expiration check...');
                 const expired = await runExpirationCheck();
 
-                // TODO: Auto-cancel expired matches
+                // Auto-cancel expired matches
                 if (expired.length > 0) {
-                    console.log('⚠️  Found expired matches - manual cancellation required');
-                    console.log('   Run: npx tsx scripts/emergencyCancel.ts');
+                    console.log('🔧 Auto-cancelling expired matches...');
+                    await autoCancelExpired(expired);
                 }
             } catch (error) {
                 console.error('[Background] Expiration check failed:', error);
