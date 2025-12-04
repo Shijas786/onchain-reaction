@@ -7,6 +7,7 @@ import ERC20Abi from "@/abi/ERC20.json";
 import { USDC_ADDRESSES, parseUSDC, parseTokenAmount } from "@/lib/contracts";
 import { useLobby } from "@/hooks/useSpacetimeDB";
 import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
+import { getDbConnection } from "@/lib/spacetimedb/client";
 
 interface LobbyJoinButtonProps {
   chainId: number;
@@ -39,6 +40,15 @@ export function LobbyJoinButton({
   const [step, setStep] = useState<'check' | 'approve' | 'join' | 'done'>('check');
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch match data from blockchain for lobby creation
+  const { data: matchData } = useReadContract({
+    address: arenaAddress,
+    abi: onchainReactionAbi,
+    functionName: "matches",
+    args: [BigInt(matchId)],
+    chainId,
+  });
 
   const usdcAddress = USDC_ADDRESSES[chainId];
   const targetTokenAddress = tokenAddress || usdcAddress;
@@ -94,13 +104,44 @@ export function LobbyJoinButton({
         (async () => {
           try {
             if (isSpacetimeConnected) {
-              // Join SpacetimeDB lobby
+              // CRITICAL: Ensure lobby exists in SpacetimeDB before joining
+              // After database clear, lobbies don't exist even if match is on-chain
+              const conn = getDbConnection();
+              if (conn) {
+                // Check if lobby exists
+                const existingLobby = conn.db.lobby.id.find(lobbyId);
+
+                if (!existingLobby && match) {
+                  console.log('[LobbyJoinButton] Lobby not found in SpacetimeDB, creating it first...');
+                  // Create the lobby first
+                  try {
+                    conn.reducers.createLobby({
+                      chainId,
+                      matchId: BigInt(match.matchId),
+                      arenaAddress,
+                      hostAddress: match.host,
+                      entryFee: match.entryFee.toString(),
+                      maxPlayers: match.maxPlayers,
+                      hostName: `${match.host.slice(0, 6)}...${match.host.slice(-4)}`,
+                      lobbyId,
+                    });
+                    // Wait a bit for lobby to be created
+                    await new Promise(r => setTimeout(r, 500));
+                  } catch (createErr) {
+                    console.log('[LobbyJoinButton] Lobby creation failed (may already exist):', createErr);
+                  }
+                }
+              }
+
+              // Now join SpacetimeDB lobby
               const joined = await joinLobby(lobbyId, address, `Player ${address.slice(0, 6)}...${address.slice(-4)}`);
               if (joined) {
 
                 // Confirm deposit
                 await confirmDeposit(lobbyId, address);
 
+              } else {
+                console.warn('[LobbyJoinButton] Failed to join SpacetimeDB lobby, but player is on-chain');
               }
             }
           } catch (err) {
