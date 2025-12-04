@@ -98,7 +98,7 @@ function LobbyContent() {
     address: arenaAddress,
     abi: onchainReactionAbi,
     functionName: "isPlayerInMatch",
-    args: [BigInt(matchId !== -1 ? matchId : 0), address],
+    args: [BigInt(matchId !== -1 ? matchId : 0), address || '0x0000000000000000000000000000000000000000'],
     chainId,
     query: {
       enabled: !!address && matchId !== -1,
