@@ -53,19 +53,33 @@ export async function connectToSpacetimeDB(): Promise<DbConnection> {
       .onConnect((conn, identity, token) => {
         clearTimeout(timeout);
         console.log("Connected to SpacetimeDB", identity.toHexString());
-        
+
         // Store the token for reconnection
         if (typeof window !== "undefined" && token) {
           localStorage.setItem("spacetimedb_token", token);
         }
-        
+
         dbConnection = conn;
         resolve(conn);
       })
       .onConnectError((ctx, err) => {
         clearTimeout(timeout);
         console.error("SpacetimeDB connection error:", err);
-        reject(err);
+
+        // If we have a stored token and connection failed, try again without it
+        // (token might be invalid after database clear)
+        if (storedToken && typeof window !== "undefined") {
+          console.log("Retrying connection without stored token...");
+          localStorage.removeItem("spacetimedb_token");
+          connectionPromise = null;
+
+          // Retry without token
+          setTimeout(() => {
+            connectToSpacetimeDB().then(resolve).catch(reject);
+          }, 1000);
+        } else {
+          reject(err);
+        }
       })
       .onDisconnect((ctx) => {
         console.log("Disconnected from SpacetimeDB");
