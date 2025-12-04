@@ -99,7 +99,7 @@ function OnlineGameContent() {
   // Fetch match data from contract to get token address and accurate prize pool
   const { data: matchData } = useReadContract({
     address: ARENA_ADDRESSES[chainId],
-    abi: ChainOrbArenaAbi,
+    abi: onchainReactionAbi,
     functionName: "matches",
     args: lobby ? [BigInt(lobby.matchId)] : undefined,
     query: {
