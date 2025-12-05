@@ -176,6 +176,9 @@ function OnlineGameContent() {
   // Check for winner and trigger backend finalization
   useEffect(() => {
     if (lobby?.status === "finished" && lobby.winnerAddress && !hasTriggeredFinalize) {
+      // Clear any pending animations immediately
+      clearExplosionQueue();
+
       setShowWinModal(true);
       setHasTriggeredFinalize(true);
 
@@ -193,7 +196,7 @@ function OnlineGameContent() {
         }
       });
     }
-  }, [lobby?.status, lobby?.winnerAddress, lobby?.matchId, chainId, hasTriggeredFinalize, finishMatch]);
+  }, [lobby?.status, lobby?.winnerAddress, lobby?.matchId, chainId, hasTriggeredFinalize, finishMatch, clearExplosionQueue]);
 
   // Handle cell click
   const handleCellClick = async (row: number, col: number) => {
