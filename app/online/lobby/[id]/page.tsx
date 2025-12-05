@@ -516,15 +516,8 @@ function LobbyContent() {
                   {isStarting ? "Starting..." : "Start Game"}
                 </Button>
 
-                {/* Recovery Button for Host */}
-                {match?.status === 0 && (spacetimeLobby?.status === "live" || spacetimeLobby?.status === "finished") && (
-                  <button
-                    onClick={handleForceStartOnChain}
-                    className="text-xs text-amber-500 hover:text-amber-400 underline mt-2"
-                  >
-                    Force Start On-Chain (Fix Stuck Game)
-                  </button>
-                )}
+
+                {/* Force Start button removed - auto-recovery handles stuck games */}
               </div>
             ) : (
               <div className="text-center p-4 bg-white/50 backdrop-blur-md rounded-2xl border border-white/50">
