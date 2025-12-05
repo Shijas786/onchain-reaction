@@ -339,6 +339,7 @@ function OnlineGameContent() {
           animating={isAnimating}
           explosionQueue={explosionQueue}
           clearExplosionQueue={clearExplosionQueue}
+          currentTurnPlayer={currentTurnPlayer?.color as any}
         />
       </div>
 

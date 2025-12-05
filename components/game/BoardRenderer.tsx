@@ -14,6 +14,7 @@ interface BoardRendererProps {
     animating: boolean;
     explosionQueue: { row: number; col: number }[];
     clearExplosionQueue: () => void;
+    currentTurnPlayer?: PlayerColor | null;
 }
 
 // 3D Projection Constants
@@ -35,6 +36,19 @@ const COLORS: Record<PlayerColor, string> = {
     cyan: "#B2EBF2",    // Pastel Cyan
 };
 
+export const getCurrentTheme = (turn: PlayerColor | null | undefined) => {
+    if (!turn || !COLORS[turn]) {
+        return {
+            orbColor: "#FFFFFF",
+            lineColor: "rgba(255, 255, 255, 0.3)",
+        };
+    }
+    return {
+        orbColor: COLORS[turn],
+        lineColor: COLORS[turn],
+    };
+};
+
 export const BoardRenderer: React.FC<BoardRendererProps> = ({
     board,
     rows,
@@ -43,6 +57,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     animating,
     explosionQueue,
     clearExplosionQueue,
+    currentTurnPlayer,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -311,7 +326,8 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
             ctx.stroke();
 
             // --- Draw Grid ---
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.3)"; // White grid lines
+            const theme = getCurrentTheme(currentTurnPlayer);
+            ctx.strokeStyle = theme.lineColor;
             ctx.lineWidth = 2 * scale;
             ctx.lineCap = "round";
             ctx.shadowBlur = 0;
