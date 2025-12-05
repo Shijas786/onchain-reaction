@@ -19,8 +19,39 @@ const schoolbell = Schoolbell({
 
 export const metadata: Metadata = {
   title: "Onchain Reaction",
-  description: "A cute and explosive chain reaction game!",
+  description: "A fast, real-time Chain Reaction strategy game played onchain with USDC stakes. Create rooms, compete in explosive orb battles, and claim the winner-takes-all pot.",
+  openGraph: {
+    title: "Explosive Onchain Strategy",
+    description: "Play Chain Reaction with real stakes. Join rooms, make moves, and win USDC",
+    images: [
+      {
+        url: "https://onchainreaction.vercel.app/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Onchain Reaction Game"
+      }
+    ],
+    type: "website",
+    url: "https://onchainreaction.vercel.app"
+  },
+  other: {
+    "fc:miniapp": JSON.stringify({
+      version: "next",
+      imageUrl: "https://onchainreaction.vercel.app/hero.png",
+      button: {
+        title: "Open App",
+        action: {
+          type: "launch_frame",
+          url: "https://onchainreaction.vercel.app/miniapp",
+          name: "OnchainReaction",
+          splashImageUrl: "https://onchainreaction.vercel.app/splash.gif",
+          splashBackgroundColor: "#FFFFFF"
+        }
+      }
+    })
+  }
 };
+
 
 // ATTENTION!!! RootLayout must be an async function to use headers()
 export default async function RootLayout({
