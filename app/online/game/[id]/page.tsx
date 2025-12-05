@@ -321,12 +321,13 @@ function OnlineGameContent() {
         </div>
       </div>
 
-      <TimerDisplay
+      {/* Timer removed - was showing NaN */}
+      {/* <TimerDisplay
         turnDeadline={gameState?.turnDeadline}
         isMyTurn={isMyTurn}
         isLive={lobby?.status === "live"}
         onClaimTimeout={claimTimeout}
-      />
+      /> */}
 
       {/* Game Board Container */}
       <div className="relative w-full h-full flex justify-center items-center">
