@@ -81,6 +81,7 @@ function LocalGameContent() {
                     animating={gameState.isAnimating}
                     explosionQueue={explosionQueue}
                     clearExplosionQueue={clearExplosionQueue}
+                    currentTurnPlayer={currentPlayer?.color}
                 />
             </div>
 
