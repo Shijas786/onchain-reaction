@@ -166,11 +166,15 @@ function OnlineGameContent() {
 
       const player = players.find(p => p.identity.toHexString() === lastMove.playerIdentity.toHexString());
       if (player) {
+        // Play pop sound when opponent makes a move
+        if (player.identity.toHexString() !== identity) {
+          soundManager.playPop();
+        }
 
         animateMove(lastMove.row, lastMove.col, player.color as GamePlayerColor);
       }
     }
-  }, [lastMove, players, animateMove]);
+  }, [lastMove, players, animateMove, identity]);
 
   const [showWinModal, setShowWinModal] = useState(false);
   const { finishMatch } = useFinishMatch();
