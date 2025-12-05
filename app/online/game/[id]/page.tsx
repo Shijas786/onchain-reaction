@@ -15,6 +15,8 @@ import { getMaxCapacity } from "@/lib/gameLogic";
 import { soundManager } from "@/lib/sound";
 import { useFinishMatch } from "@/hooks/useFinishMatch";
 
+// TimerDisplay component removed - turn timer hidden from UI
+/*
 function TimerDisplay({
   turnDeadline,
   isMyTurn,
@@ -67,6 +69,7 @@ function TimerDisplay({
     </>
   );
 }
+*/
 
 function OnlineGameContent() {
   const params = useParams();
