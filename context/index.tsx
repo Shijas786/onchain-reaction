@@ -4,6 +4,8 @@
 import React, { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider, cookieToInitialState, type Config } from 'wagmi'
+import { OnchainKitProvider } from '@coinbase/onchainkit'
+import { base } from 'wagmi/chains'
 import { config } from '@/config'
 import { FarcasterProvider } from './FarcasterProvider'
 
@@ -19,12 +21,17 @@ export default function ContextProvider({
   const initialState = cookieToInitialState(config as Config, cookies)
 
   return (
-    <WagmiProvider config={config as Config} initialState={initialState}>
-      <QueryClientProvider client={queryClient}>
-        <FarcasterProvider>
-          {children}
-        </FarcasterProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <OnchainKitProvider
+      apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+      chain={base}
+    >
+      <WagmiProvider config={config as Config} initialState={initialState}>
+        <QueryClientProvider client={queryClient}>
+          <FarcasterProvider>
+            {children}
+          </FarcasterProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </OnchainKitProvider>
   )
 }

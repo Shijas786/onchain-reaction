@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Fredoka, Schoolbell } from "next/font/google";
+import "@coinbase/onchainkit/styles.css";
 import "./globals.css";
+
 
 import { headers } from "next/headers"; // Import headers function
 import ContextProvider from "@/context"; // Adjust import path if needed
