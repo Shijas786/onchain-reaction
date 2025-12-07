@@ -24,12 +24,12 @@ export function FarcasterWalletButton() {
         }
     }, [isAuthenticated, isConnected, connect, connectors])
 
-    // If wallet is already connected, show connected state (handles Base app case)
+    // If wallet is already connected, show connected state
     if (isConnected && address) {
         return (
             <div className="flex flex-col gap-2">
                 <div className="px-4 py-2 border-4 border-black rounded-2xl bg-[#FFD3B6] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    {/* Show Farcaster profile if available */}
+                    {/* Show user profile if available in miniapp */}
                     {isInMiniApp && user ? (
                         <div className="flex items-center gap-2">
                             {user.pfpUrl && (
@@ -41,7 +41,7 @@ export function FarcasterWalletButton() {
                             )}
                             <div className="flex flex-col">
                                 <p className="font-bold text-sm">
-                                    {user.displayName || user.username || 'Farcaster User'}
+                                    {user.displayName || user.username || 'Player'}
                                 </p>
                                 {user.username && user.displayName && (
                                     <p className="text-xs opacity-70">@{user.username}</p>
@@ -67,7 +67,7 @@ export function FarcasterWalletButton() {
         )
     }
 
-    // If not authenticated and not connected, show sign-in button
+    // If not authenticated and not connected, show connect button
     if (!isAuthenticated) {
         return (
             <Button
@@ -77,7 +77,7 @@ export function FarcasterWalletButton() {
                 disabled={authLoading}
                 className="border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-[#A8E6CF] text-black font-bold rounded-2xl disabled:opacity-50"
             >
-                {authLoading ? 'Signing in...' : '🔐 Sign in with Farcaster'}
+                {authLoading ? 'Connecting...' : '🔐 Connect Wallet'}
             </Button>
         )
     }
