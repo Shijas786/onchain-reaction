@@ -104,6 +104,19 @@ export function useFarcasterAuth() {
     const checkExistingAuth = useCallback(() => {
         if (typeof window === 'undefined') return
 
+        // Auto-authenticate if in miniapp with valid context
+        if (isInMiniApp && context?.user) {
+            setAuthState({
+                isAuthenticated: true,
+                isLoading: false,
+                error: null,
+                signInResult: null,
+                userData: context.user,
+            })
+            return
+        }
+
+        // Check localStorage for existing auth
         const stored = localStorage.getItem('farcaster_auth')
         if (stored) {
             try {
@@ -128,7 +141,7 @@ export function useFarcasterAuth() {
                 localStorage.removeItem('farcaster_auth')
             }
         }
-    }, [context])
+    }, [context, isInMiniApp])
 
     return {
         ...authState,
