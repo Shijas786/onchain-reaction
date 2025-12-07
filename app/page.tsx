@@ -46,7 +46,7 @@ export default function Home() {
               size="lg"
               className="w-full border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-[#C7CEEA] text-black font-bold rounded-2xl"
             >
-              Online Multiplayer 💰
+              Play for USDC
             </Button>
           </Link>
           <Link href="/profile/prizes" className="w-full">
