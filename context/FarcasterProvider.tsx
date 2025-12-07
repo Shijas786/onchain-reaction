@@ -41,7 +41,7 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
             try {
                 if (sdk) {
                     setIsInMiniApp(true)
-                    const farcasterContext = sdk.context
+                    const farcasterContext = await sdk.context
                     setContext(farcasterContext)
 
                     // Extract real user data from context
