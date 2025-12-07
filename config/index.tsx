@@ -15,7 +15,7 @@ export const config = createConfig({
   storage: createStorage({ storage: cookieStorage }),
   ssr: true,
   transports: {
-    [base.id]: http(),
+    [base.id]: http('https://base-mainnet.g.alchemy.com/v2/eTjwZLPVQJs7qTv3Inh338N4Uss_z7OT'),
     [arbitrum.id]: http(),
   },
 })
