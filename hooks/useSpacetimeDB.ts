@@ -184,11 +184,33 @@ export function useLobby(lobbyId: string | null) {
 
         const playersData = Array.from(ctx.db.lobbyPlayer.lobby_id.filter(lobbyId));
         console.log(`[useLobby] Loaded ${playersData.length} players from SpacetimeDB for lobby ${lobbyId}:`, playersData.map(p => ({ id: p.id, name: p.name, color: p.color })));
-        const mappedPlayers = playersData.map(p => ({
-          ...p as unknown as LobbyPlayer,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`,
-          farcasterHandle: `@${p.name.toLowerCase().replace(/\s+/g, '')}`,
-        }));
+        const mappedPlayers = playersData.map(p => {
+          // Try to parse Farcaster data from name field
+          let displayName = p.name;
+          let avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`;
+          let farcasterHandle = `@${p.name.toLowerCase().replace(/\s+/g, '')}`;
+
+          try {
+            // Check if name is JSON-encoded Farcaster data
+            if (p.name.startsWith('{')) {
+              const farcasterData = JSON.parse(p.name);
+              if (farcasterData.displayName) {
+                displayName = farcasterData.displayName;
+                avatar = farcasterData.pfpUrl || avatar;
+                farcasterHandle = farcasterData.username ? `@${farcasterData.username}` : farcasterHandle;
+              }
+            }
+          } catch (e) {
+            // Not JSON, use name as-is
+          }
+
+          return {
+            ...p as unknown as LobbyPlayer,
+            name: displayName,
+            avatar,
+            farcasterHandle,
+          };
+        });
         console.log(`[useLobby] Mapped players:`, mappedPlayers.length, mappedPlayers.map(p => ({ name: p.name, color: p.color })));
         setPlayers(mappedPlayers);
 
@@ -235,10 +257,30 @@ export function useLobby(lobbyId: string | null) {
         setPlayers(prev => {
           const existing = prev.find(p => p.id === row.id);
           if (existing) return prev;
+
+          // Parse Farcaster data from name
+          let displayName = row.name;
+          let avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name)}&background=random`;
+          let farcasterHandle = `@${row.name.toLowerCase().replace(/\s+/g, '')}`;
+
+          try {
+            if (row.name.startsWith('{')) {
+              const farcasterData = JSON.parse(row.name);
+              if (farcasterData.displayName) {
+                displayName = farcasterData.displayName;
+                avatar = farcasterData.pfpUrl || avatar;
+                farcasterHandle = farcasterData.username ? `@${farcasterData.username}` : farcasterHandle;
+              }
+            }
+          } catch (e) {
+            // Not JSON, use name as-is
+          }
+
           return [...prev, {
             ...row as unknown as LobbyPlayer,
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(row.name)}&background=random`,
-            farcasterHandle: `@${row.name.toLowerCase().replace(/\s+/g, '')}`,
+            name: displayName,
+            avatar,
+            farcasterHandle,
           }];
         });
       }
@@ -246,15 +288,34 @@ export function useLobby(lobbyId: string | null) {
 
     conn.db.lobbyPlayer.onUpdate((ctx, oldRow, newRow) => {
       if (newRow.lobbyId === lobbyId) {
-        setPlayers(prev => prev.map(p =>
-          p.id === newRow.id
-            ? {
-              ...newRow as unknown as LobbyPlayer,
-              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newRow.name)}&background=random`,
-              farcasterHandle: `@${newRow.name.toLowerCase().replace(/\s+/g, '')}`,
+        setPlayers(prev => prev.map(p => {
+          if (p.id !== newRow.id) return p;
+
+          // Parse Farcaster data from name
+          let displayName = newRow.name;
+          let avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(newRow.name)}&background=random`;
+          let farcasterHandle = `@${newRow.name.toLowerCase().replace(/\s+/g, '')}`;
+
+          try {
+            if (newRow.name.startsWith('{')) {
+              const farcasterData = JSON.parse(newRow.name);
+              if (farcasterData.displayName) {
+                displayName = farcasterData.displayName;
+                avatar = farcasterData.pfpUrl || avatar;
+                farcasterHandle = farcasterData.username ? `@${farcasterData.username}` : farcasterHandle;
+              }
             }
-            : p
-        ));
+          } catch (e) {
+            // Not JSON, use name as-is
+          }
+
+          return {
+            ...newRow as unknown as LobbyPlayer,
+            name: displayName,
+            avatar,
+            farcasterHandle,
+          };
+        }));
       }
     });
 

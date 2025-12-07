@@ -8,6 +8,7 @@ import { USDC_ADDRESSES, parseUSDC, parseTokenAmount } from "@/lib/contracts";
 import { useLobby } from "@/hooks/useSpacetimeDB";
 import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 import { getDbConnection } from "@/lib/spacetimedb/client";
+import { useFarcaster } from "@/context/FarcasterProvider";
 
 interface LobbyJoinButtonProps {
   chainId: number;
@@ -37,6 +38,7 @@ export function LobbyJoinButton({
   const publicClient = usePublicClient();
   const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
   const { joinLobby, confirmDeposit } = useLobby(lobbyId || null);
+  const { user: farcasterUser, isInMiniApp } = useFarcaster();
   const [step, setStep] = useState<'check' | 'approve' | 'join' | 'done'>('check');
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
   const [error, setError] = useState<string | null>(null);
@@ -134,8 +136,23 @@ export function LobbyJoinButton({
                 }
               }
 
+              // Prepare player name with Farcaster data if available
+              let playerName: string;
+              if (isInMiniApp && farcasterUser) {
+                // Encode Farcaster data in JSON format
+                playerName = JSON.stringify({
+                  displayName: farcasterUser.displayName || farcasterUser.username || `Player ${address.slice(0, 6)}`,
+                  username: farcasterUser.username,
+                  pfpUrl: farcasterUser.pfpUrl,
+                  fid: farcasterUser.fid
+                });
+              } else {
+                // Fallback to address-based name
+                playerName = `Player ${address.slice(0, 6)}...${address.slice(-4)}`;
+              }
+
               // Now join SpacetimeDB lobby
-              const joined = await joinLobby(lobbyId, address, `Player ${address.slice(0, 6)}...${address.slice(-4)}`);
+              const joined = await joinLobby(lobbyId, address, playerName);
               if (joined) {
 
                 // Confirm deposit
@@ -154,7 +171,7 @@ export function LobbyJoinButton({
         })();
       }
     }
-  }, [isSuccess, txHash, step, refetchAllowance, onSuccess, address, lobbyId, isSpacetimeConnected, joinLobby, confirmDeposit]);
+  }, [isSuccess, txHash, step, refetchAllowance, onSuccess, address, lobbyId, isSpacetimeConnected, joinLobby, confirmDeposit, isInMiniApp, farcasterUser]);
 
   async function handleApprove() {
     setError(null);
