@@ -15,6 +15,7 @@ import { formatRoomCode } from "@/lib/roomCode";
 import { useLobby } from "@/hooks/useSpacetimeDB";
 import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 import { getDbConnection } from "@/lib/spacetimedb/client";
+import { useFarcaster } from "@/context/FarcasterProvider";
 
 interface Player {
   id: string;
@@ -32,6 +33,7 @@ function LobbyContent() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { isConnected: isSpacetimeConnected } = useSpacetimeConnection();
+  const { user: farcasterUser, isInMiniApp } = useFarcaster();
 
   const roomCode = params.id as string;
   const matchIdParam = searchParams.get("matchId");
@@ -429,53 +431,70 @@ function LobbyContent() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {players.map((player, index) => (
-              <motion.div
-                key={player.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={`flex items-center gap-4 p-4 rounded-2xl border ${player.address.toLowerCase() === address?.toLowerCase()
-                  ? "bg-blue-50 border-blue-200"
-                  : "bg-slate-50 border-slate-100"
-                  }`}
-              >
-                <Image
-                  src={player.avatar}
-                  alt={player.name}
-                  width={48}
-                  height={48}
-                  className="w-12 h-12 rounded-full border-2 border-white shadow-sm object-cover"
-                  unoptimized
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-slate-800 flex items-center gap-2">
-                    <span className="truncate">{player.name}</span>
-                    {player.isHost && (
-                      <span className="bg-yellow-100 text-yellow-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold flex-shrink-0">
-                        HOST
-                      </span>
-                    )}
-                    {player.address.toLowerCase() === address?.toLowerCase() && (
-                      <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold flex-shrink-0">
-                        YOU
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm text-slate-400 font-mono truncate">
-                    {player.farcasterHandle}
-                  </div>
-                  {player.hasDeposited !== undefined && (
-                    <div className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${player.hasDeposited
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-amber-100 text-amber-700"
-                      }`}>
-                      {player.hasDeposited ? "DEPOSITED" : "PENDING"}
+            {players.map((player, index) => {
+              // Check if this is the current user and we have Farcaster data
+              const isCurrentUser = player.address.toLowerCase() === address?.toLowerCase();
+              const useFarcasterData = isCurrentUser && isInMiniApp && farcasterUser;
+
+              // Use Farcaster data if available, otherwise use player data
+              const displayAvatar = useFarcasterData && farcasterUser.pfpUrl
+                ? farcasterUser.pfpUrl
+                : player.avatar;
+              const displayName = useFarcasterData && farcasterUser.displayName
+                ? farcasterUser.displayName
+                : player.name;
+              const displayHandle = useFarcasterData && farcasterUser.username
+                ? `@${farcasterUser.username}`
+                : player.farcasterHandle;
+
+              return (
+                <motion.div
+                  key={player.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`flex items-center gap-4 p-4 rounded-2xl border ${isCurrentUser
+                    ? "bg-blue-50 border-blue-200"
+                    : "bg-slate-50 border-slate-100"
+                    }`}
+                >
+                  <Image
+                    src={displayAvatar}
+                    alt={displayName}
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 rounded-full border-2 border-white shadow-sm object-cover"
+                    unoptimized
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-slate-800 flex items-center gap-2">
+                      <span className="truncate">{displayName}</span>
+                      {player.isHost && (
+                        <span className="bg-yellow-100 text-yellow-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold flex-shrink-0">
+                          HOST
+                        </span>
+                      )}
+                      {isCurrentUser && (
+                        <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold flex-shrink-0">
+                          YOU
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                    <div className="text-sm text-slate-400 font-mono truncate">
+                      {displayHandle}
+                    </div>
+                    {player.hasDeposited !== undefined && (
+                      <div className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${player.hasDeposited
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-amber-100 text-amber-700"
+                        }`}>
+                        {player.hasDeposited ? "DEPOSITED" : "PENDING"}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
 
             {/* Empty Slots */}
             {Array.from({ length: Math.max(0, maxPlayers - players.length) }).map(
