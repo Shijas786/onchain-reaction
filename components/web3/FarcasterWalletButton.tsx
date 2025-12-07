@@ -4,12 +4,14 @@ import { useEffect } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { Button } from '@/components/ui/Button'
 import { useFarcasterAuth } from '@/hooks/useFarcasterAuth'
+import { useFarcaster } from '@/context/FarcasterProvider'
 
 export function FarcasterWalletButton() {
     const { address, isConnected } = useAccount()
     const { connect, connectors } = useConnect()
     const { disconnect } = useDisconnect()
     const { isAuthenticated, signIn, isLoading: authLoading, checkExistingAuth } = useFarcasterAuth()
+    const { user, isInMiniApp } = useFarcaster()
 
     useEffect(() => {
         checkExistingAuth()
@@ -27,9 +29,31 @@ export function FarcasterWalletButton() {
         return (
             <div className="flex flex-col gap-2">
                 <div className="px-4 py-2 border-4 border-black rounded-2xl bg-[#FFD3B6] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    <p className="font-bold text-sm">
-                        {address.slice(0, 6)}...{address.slice(-4)}
-                    </p>
+                    {/* Show Farcaster profile if available */}
+                    {isInMiniApp && user ? (
+                        <div className="flex items-center gap-2">
+                            {user.pfpUrl && (
+                                <img
+                                    src={user.pfpUrl}
+                                    alt={user.displayName || user.username || 'User'}
+                                    className="w-8 h-8 rounded-full border-2 border-black"
+                                />
+                            )}
+                            <div className="flex flex-col">
+                                <p className="font-bold text-sm">
+                                    {user.displayName || user.username || 'Farcaster User'}
+                                </p>
+                                {user.username && user.displayName && (
+                                    <p className="text-xs opacity-70">@{user.username}</p>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        /* Fallback to wallet address */
+                        <p className="font-bold text-sm">
+                            {address.slice(0, 6)}...{address.slice(-4)}
+                        </p>
+                    )}
                 </div>
                 <Button
                     variant="secondary"
