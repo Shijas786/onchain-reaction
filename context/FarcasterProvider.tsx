@@ -5,9 +5,9 @@ import sdk from '@farcaster/miniapp-sdk'
 
 interface FarcasterUser {
     fid: number
-    username: string
-    displayName: string
-    pfpUrl: string
+    username?: string
+    displayName?: string
+    pfpUrl?: string
 }
 
 interface FarcasterContextType {
