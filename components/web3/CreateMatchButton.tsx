@@ -474,36 +474,18 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
 
   return (
     <div className="space-y-4">
-      {/* Chain Selection */}
+      {/* Network Display - Base Only */}
       <div className="space-y-2">
         <label className="text-sm font-bold text-slate-700">Network</label>
         <div className="flex gap-2">
-          {[CHAIN_IDS.BASE, CHAIN_IDS.ARBITRUM].map((chainId) => (
-            <button
-              key={chainId}
-              onClick={() => setSelectedChain(chainId)}
-              className={`flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${selectedChain === chainId
-                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-            >
-              {chainId === CHAIN_IDS.BASE && (
-                <img
-                  src="/assets/base.jpg"
-                  alt="Base"
-                  className="w-5 h-5 rounded-full"
-                />
-              )}
-              {chainId === CHAIN_IDS.ARBITRUM && (
-                <img
-                  src="/assets/arbitrum.jpg"
-                  alt="Arbitrum"
-                  className="w-5 h-5 rounded-full"
-                />
-              )}
-              {getChainName(chainId)}
-            </button>
-          ))}
+          <div className="flex-1 px-4 py-3 rounded-xl font-bold text-sm bg-blue-500 text-white shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+            <img
+              src="/assets/base.jpg"
+              alt="Base"
+              className="w-5 h-5 rounded-full"
+            />
+            Base
+          </div>
         </div>
       </div>
 
