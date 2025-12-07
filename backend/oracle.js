@@ -14,7 +14,7 @@ const CHAIN_IDS = {
 const CONFIG = {
     [CHAIN_IDS.BASE]: {
         chain: base,
-        rpcUrl: "https://mainnet.base.org",
+        rpcUrl: "https://base-mainnet.g.alchemy.com/v2/eTjwZLPVQJs7qTv3Inh338N4Uss_z7OT",
         contractAddress: "0x426E2cA323fA707bd1921ECcce0a27aD7804b2A2" // OnchainReactionBaseV3 (NEW)
     },
     [CHAIN_IDS.ARBITRUM]: {
