@@ -432,20 +432,14 @@ function LobbyContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {players.map((player, index) => {
-              // Check if this is the current user and we have Farcaster data
+              // Check if this is the current user
               const isCurrentUser = player.address.toLowerCase() === address?.toLowerCase();
-              const useFarcasterData = isCurrentUser && isInMiniApp && farcasterUser;
 
-              // Use Farcaster data if available, otherwise use player data
-              const displayAvatar = useFarcasterData && farcasterUser.pfpUrl
-                ? farcasterUser.pfpUrl
-                : player.avatar;
-              const displayName = useFarcasterData && farcasterUser.displayName
-                ? farcasterUser.displayName
-                : player.name;
-              const displayHandle = useFarcasterData && farcasterUser.username
-                ? `@${farcasterUser.username}`
-                : player.farcasterHandle;
+              // Player data already has parsed Farcaster info from SpacetimeDB
+              // Just use it directly - no need to check if current user
+              const displayAvatar = player.avatar;
+              const displayName = player.name;
+              const displayHandle = player.farcasterHandle;
 
               return (
                 <motion.div
