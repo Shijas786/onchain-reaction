@@ -22,20 +22,7 @@ export function FarcasterWalletButton() {
         }
     }, [isAuthenticated, isConnected, connect, connectors])
 
-    if (!isAuthenticated) {
-        return (
-            <Button
-                variant="primary"
-                size="lg"
-                onClick={signIn}
-                disabled={authLoading}
-                className="border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-[#A8E6CF] text-black font-bold rounded-2xl disabled:opacity-50"
-            >
-                {authLoading ? 'Signing in...' : '🔐 Sign in with Farcaster'}
-            </Button>
-        )
-    }
-
+    // If wallet is already connected, show connected state (handles Base app case)
     if (isConnected && address) {
         return (
             <div className="flex flex-col gap-2">
@@ -56,6 +43,22 @@ export function FarcasterWalletButton() {
         )
     }
 
+    // If not authenticated and not connected, show sign-in button
+    if (!isAuthenticated) {
+        return (
+            <Button
+                variant="primary"
+                size="lg"
+                onClick={signIn}
+                disabled={authLoading}
+                className="border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all bg-[#A8E6CF] text-black font-bold rounded-2xl disabled:opacity-50"
+            >
+                {authLoading ? 'Signing in...' : '🔐 Sign in with Farcaster'}
+            </Button>
+        )
+    }
+
+    // Fallback: show connect wallet button
     return (
         <Button
             variant="primary"
