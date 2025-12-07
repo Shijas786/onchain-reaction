@@ -7,6 +7,7 @@ import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { Button } from "@/components/ui/Button";
 import { DoodleBackground } from "@/components/ui/DoodleBackground";
 import { LobbyJoinButton } from "@/components/web3/LobbyJoinButton";
+import { FarcasterWalletButton } from "@/components/web3/FarcasterWalletButton";
 import { motion } from "framer-motion";
 import { onchainReactionAbi } from "@/lib/onchainReaction";
 import { ARENA_ADDRESSES, CHAIN_IDS, getChainName, formatUSDC, parseUSDC, formatTokenAmount, BASE_JESSE } from "@/lib/contracts";
@@ -501,7 +502,7 @@ function LobbyContent() {
               <p className="text-slate-600 text-sm">
                 Connect your wallet to join this match
               </p>
-              <appkit-button />
+              <FarcasterWalletButton />
             </div>
           ) : hasJoined || isHost || isSpacetimeHost ? (
             (isHost || isSpacetimeHost) && players.length >= 2 ? (

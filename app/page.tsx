@@ -4,13 +4,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { DoodleText } from "@/components/ui/DoodleText";
 import { HowToPlay } from "@/components/ui/HowToPlay";
+import { FarcasterWalletButton } from "@/components/web3/FarcasterWalletButton";
 
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 md:p-8 bg-transparent relative overflow-y-auto">
       {/* Wallet Connect Button - Top Right */}
       <div className="absolute top-4 right-4 z-20">
-        <appkit-button />
+        <FarcasterWalletButton />
       </div>
 
       {/* Background Image */}

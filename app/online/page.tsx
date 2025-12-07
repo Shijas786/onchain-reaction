@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
 import { BackgroundAnimation } from "@/components/ui/BackgroundAnimation";
 import { CreateMatchButton } from "@/components/web3/CreateMatchButton";
+import { FarcasterWalletButton } from "@/components/web3/FarcasterWalletButton";
 import { ARENA_ADDRESSES, getChainName } from "@/lib/contracts";
 
 type Tab = "join" | "create";
@@ -58,7 +59,7 @@ export default function OnlineMenu() {
               <span className="text-xs text-slate-400">Not connected</span>
             )}
           </div>
-          <appkit-button />
+          <FarcasterWalletButton />
         </div>
 
         {/* Main Card */}
@@ -139,7 +140,7 @@ export default function OnlineMenu() {
                         Connect your wallet to create a match
                       </p>
                       <div className="pt-2">
-                        <appkit-button />
+                        <FarcasterWalletButton />
                       </div>
                     </div>
                   )}
