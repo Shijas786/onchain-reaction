@@ -16,7 +16,6 @@ export default __t.object("GameState", {
   rows: __t.u32(),
   cols: __t.u32(),
   currentPlayerIndex: __t.u32(),
-  isAnimating: __t.bool(),
   moveCount: __t.u32(),
   lastMoveAt: __t.timestamp(),
   turnDeadline: __t.timestamp(),

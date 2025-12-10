@@ -75,7 +75,6 @@ pub struct GameState {
     pub rows: u32,                // Board height
     pub cols: u32,                // Board width
     pub current_player_index: u32,
-    pub is_animating: bool,
     pub move_count: u32,
     pub last_move_at: Timestamp,
     pub turn_deadline: Timestamp, // When the current turn expires
@@ -219,7 +218,6 @@ pub fn create_lobby(
         rows: rows as u32,
         cols: cols as u32,
         current_player_index: 0,
-        is_animating: false,
         move_count: 0,
         last_move_at: now,
         turn_deadline: now, // Will be set correctly on start_game
@@ -392,10 +390,6 @@ pub fn make_move(
         if time_since_last < std::time::Duration::from_millis(300) {
             panic!("Move too fast, wait 300ms between moves");
         }
-    }
-
-    if game_state.is_animating {
-        panic!("Wait for animation to finish");
     }
 
     // Get alive players sorted by join time

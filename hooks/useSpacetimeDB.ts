@@ -53,7 +53,6 @@ export type GameState = {
   rows: number;
   cols: number;
   currentPlayerIndex: number;
-  isAnimating: boolean;
   moveCount: number;
   lastMoveAt: bigint;
   turnDeadline: bigint;
