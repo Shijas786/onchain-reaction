@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain, usePublicClient } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useAccount, useSwitchChain, usePublicClient, useSendTransaction } from "wagmi";
 import { onchainReactionAbi } from "@/lib/onchainReaction";
 import ERC20Abi from "@/abi/ERC20.json";
 import { USDC_ADDRESSES, parseUSDC, parseTokenAmount } from "@/lib/contracts";
+import { encodeFunctionData } from "viem";
+import { appendBuilderSuffix } from "@/lib/builderCode";
 import { useLobby } from "@/hooks/useSpacetimeDB";
 import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 import { getDbConnection } from "@/lib/spacetimedb/client";
@@ -74,7 +76,9 @@ export function LobbyJoinButton({
     chainId,
   });
 
-  const { writeContractAsync, isPending } = useWriteContract();
+  const { writeContractAsync, isPending: isWritePending } = useWriteContract();
+  const { sendTransactionAsync, isPending: isSendPending } = useSendTransaction();
+  const isPending = isWritePending || isSendPending;
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
   });
@@ -245,11 +249,19 @@ export function LobbyJoinButton({
     }
 
     try {
-      const hash = await writeContractAsync({
-        address: arenaAddress,
+      // Encode function data
+      const encodedData = encodeFunctionData({
         abi: onchainReactionAbi,
         functionName: "joinMatch",
         args: [BigInt(matchId)],
+      });
+
+      // Append Base Builder Code suffix
+      const dataWithSuffix = appendBuilderSuffix(encodedData);
+
+      const hash = await sendTransactionAsync({
+        to: arenaAddress,
+        data: dataWithSuffix,
         chainId,
       });
       setTxHash(hash);

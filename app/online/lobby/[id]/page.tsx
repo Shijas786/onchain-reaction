@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useMemo } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useWriteContract, useSendTransaction } from "wagmi";
 import { Button } from "@/components/ui/Button";
 import { DoodleBackground } from "@/components/ui/DoodleBackground";
 import { LobbyJoinButton } from "@/components/web3/LobbyJoinButton";
@@ -12,6 +12,8 @@ import { motion } from "framer-motion";
 import { onchainReactionAbi } from "@/lib/onchainReaction";
 import { ARENA_ADDRESSES, CHAIN_IDS, getChainName, formatUSDC, parseUSDC, formatTokenAmount, BASE_JESSE } from "@/lib/contracts";
 import { formatRoomCode } from "@/lib/roomCode";
+import { encodeFunctionData } from "viem";
+import { appendBuilderSuffix } from "@/lib/builderCode";
 import { useLobby } from "@/hooks/useSpacetimeDB";
 import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 import { getDbConnection } from "@/lib/spacetimedb/client";
@@ -251,6 +253,7 @@ function LobbyContent() {
   }, [refetchMatch, refetchPlayers]);
 
   const { writeContractAsync } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
 
   const handleStartGame = async () => {
     if (!players || players.length < 2) {
@@ -274,11 +277,16 @@ function LobbyContent() {
       if (match?.status === 0) { // Pending
         try {
 
-          const hash = await writeContractAsync({
-            address: arenaAddress,
+          const encodedData = encodeFunctionData({
             abi: onchainReactionAbi,
             functionName: "startMatch",
             args: [BigInt(matchId)],
+          });
+          const dataWithSuffix = appendBuilderSuffix(encodedData);
+
+          const hash = await sendTransactionAsync({
+            to: arenaAddress,
+            data: dataWithSuffix,
             chainId,
           });
 
@@ -319,11 +327,16 @@ function LobbyContent() {
   // Recovery: Force start on-chain if stuck
   const handleForceStartOnChain = async () => {
     try {
-      const hash = await writeContractAsync({
-        address: arenaAddress,
+      const encodedData = encodeFunctionData({
         abi: onchainReactionAbi,
         functionName: "startMatch",
         args: [BigInt(matchId)],
+      });
+      const dataWithSuffix = appendBuilderSuffix(encodedData);
+
+      const hash = await sendTransactionAsync({
+        to: arenaAddress,
+        data: dataWithSuffix,
         chainId,
       });
       alert(`Transaction sent: ${hash}`);

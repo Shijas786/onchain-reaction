@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient, useReadContract, useSwitchChain } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount, usePublicClient, useReadContract, useSwitchChain, useSendTransaction } from "wagmi";
 import { onchainReactionAbi } from "@/lib/onchainReaction";
 import ERC20Abi from "@/abi/ERC20.json";
 import { ARENA_ADDRESSES, parseUSDC, ENTRY_FEE_OPTIONS, MAX_PLAYERS_OPTIONS, getChainName, CHAIN_IDS, USDC_ADDRESSES, TOKENS, parseTokenAmount, formatTokenAmount } from "@/lib/contracts";
-import { decodeEventLog } from "viem";
+import { decodeEventLog, encodeFunctionData } from "viem";
 import { generateRoomCode, formatRoomCode } from "@/lib/roomCode";
+import { appendBuilderSuffix } from "@/lib/builderCode";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSpacetimeConnection } from "@/hooks/useSpacetimeDB";
 import { getDbConnection } from "@/lib/spacetimedb/client";
@@ -103,10 +104,13 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     },
   });
 
-  const { writeContractAsync, isPending } = useWriteContract();
+  const { writeContractAsync, isPending: isWritePending } = useWriteContract();
+  const { sendTransactionAsync, isPending: isSendPending } = useSendTransaction();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
   });
+
+  const isPending = isWritePending || isSendPending;
 
   // Reset step when fee or chain changes
   useEffect(() => {
@@ -337,11 +341,20 @@ export function CreateMatchButton({ onMatchCreated }: CreateMatchButtonProps) {
     setIsCreating(true);
 
     try {
-      const hash = await writeContractAsync({
-        address: arenaAddress,
+      // Encode function data
+      const encodedData = encodeFunctionData({
         abi: onchainReactionAbi,
         functionName: "createMatch",
         args: [tokenAddress, entryFeeWei, BigInt(maxPlayers)],
+      });
+
+      // Append Base Builder Code suffix
+      const dataWithSuffix = appendBuilderSuffix(encodedData);
+
+      // Send transaction
+      const hash = await sendTransactionAsync({
+        to: arenaAddress,
+        data: dataWithSuffix,
         chainId: selectedChain,
       });
 

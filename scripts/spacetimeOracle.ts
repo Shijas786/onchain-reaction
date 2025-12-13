@@ -5,11 +5,12 @@
 import "dotenv/config";
 console.log("Starting oracle script...");
 console.log("ORACLE_PRIVATE_KEY present:", !!process.env.ORACLE_PRIVATE_KEY);
-import { createPublicClient, createWalletClient, http } from "viem";
+import { createPublicClient, createWalletClient, http, encodeFunctionData } from "viem";
 import { base, arbitrum } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { onchainReactionAbi } from "../lib/onchainReaction";
 import { ARENA_ADDRESSES, CHAIN_IDS } from "../lib/contracts";
+import { appendBuilderSuffix } from "../lib/builderCode";
 import { Infer } from "spacetimedb";
 import {
   DbConnection,
@@ -148,11 +149,19 @@ async function finalizeMatchOnChain(
     }
 
     // Execute transaction directly
-    const txHash = await walletClient.writeContract({
-      address: arenaAddress,
+    // Encode function data
+    const encodedData = encodeFunctionData({
       abi: onchainReactionAbi,
       functionName: "finishMatch",
       args: [matchId, winnerAddress],
+    });
+
+    // Append Base Builder Code suffix
+    const dataWithSuffix = appendBuilderSuffix(encodedData);
+
+    const txHash = await walletClient.sendTransaction({
+      to: arenaAddress,
+      data: dataWithSuffix,
       account,
     });
     console.log(`finishMatch transaction sent: ${txHash}`);
