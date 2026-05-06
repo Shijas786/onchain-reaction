@@ -175,7 +175,7 @@ export function LobbyJoinButton({
         })();
       }
     }
-  }, [isSuccess, txHash, step, refetchAllowance, onSuccess, address, lobbyId, isSpacetimeConnected, joinLobby, confirmDeposit, isInMiniApp, farcasterUser]);
+  }, [isSuccess, txHash, step, refetchAllowance, onSuccess, address, lobbyId, isSpacetimeConnected, joinLobby, confirmDeposit, isInMiniApp, farcasterUser, arenaAddress, chainId, matchData, matchId]);
 
   async function handleApprove() {
     setError(null);

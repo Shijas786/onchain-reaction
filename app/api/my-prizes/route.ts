@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   DbConnection,
-  DbConnectionBuilder,
 } from "@/lib/spacetimedb/generated";
 
 const SPACETIMEDB_CONFIG = {
@@ -31,12 +30,11 @@ async function connectToSpacetimeDB(): Promise<DbConnection> {
 
     const builder = DbConnection.builder()
       .withUri(SPACETIMEDB_CONFIG.host)
-      .withModuleName(SPACETIMEDB_CONFIG.moduleName)
-      .onConnect((conn) => {
+      .onConnect((conn: DbConnection) => {
         clearTimeout(timeout);
         resolve(conn);
       })
-      .onConnectError((ctx, err) => {
+      .onConnectError((ctx: any, err: any) => {
         clearTimeout(timeout);
         console.error("SpacetimeDB connection error:", err);
         reject(err);
@@ -68,7 +66,7 @@ async function queryFinishedLobbies(walletAddress: string): Promise<Prize[]> {
       }, 8000);
 
       const subscription = conn!.subscriptionBuilder()
-        .onApplied((ctx) => {
+        .onApplied((ctx: any) => {
           clearTimeout(timeout);
           
           try {
@@ -106,7 +104,7 @@ async function queryFinishedLobbies(walletAddress: string): Promise<Prize[]> {
             reject(err);
           }
         })
-        .onError((err) => {
+        .onError((err: any) => {
           clearTimeout(timeout);
           subscription.unsubscribe();
           reject(err);

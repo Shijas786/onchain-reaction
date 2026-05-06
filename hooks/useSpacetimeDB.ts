@@ -153,6 +153,7 @@ export function useLobby(lobbyId: string | null) {
   const [players, setPlayers] = useState<LobbyPlayer[]>([]);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [board, setBoard] = useState<Board | null>(null);
+  const [optimisticBoard, setOptimisticBoard] = useState<Board | null>(null);
   const [lastMove, setLastMove] = useState<GameMove | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -181,7 +182,7 @@ export function useLobby(lobbyId: string | null) {
           setLobby(lobbyData as unknown as Lobby);
         }
 
-        const playersData = Array.from(ctx.db.lobbyPlayer.lobby_id.filter(lobbyId));
+        const playersData = Array.from(ctx.db.lobby_player.lobby_id.filter(lobbyId));
         console.log(`[useLobby] Loaded ${playersData.length} players from SpacetimeDB for lobby ${lobbyId}:`, playersData.map(p => ({ id: p.id, name: p.name, color: p.color })));
         const mappedPlayers = playersData.map(p => {
           // Try to parse Farcaster data from name field
@@ -213,11 +214,12 @@ export function useLobby(lobbyId: string | null) {
         console.log(`[useLobby] Mapped players:`, mappedPlayers.length, mappedPlayers.map(p => ({ name: p.name, color: p.color })));
         setPlayers(mappedPlayers);
 
-        const gameData = ctx.db.gameState.lobby_id.find(lobbyId);
+        const gameData = ctx.db.game_state.lobby_id.find(lobbyId);
         if (gameData) {
           const gs = gameData as unknown as GameState;
           setGameState(gs);
           setBoard(parseBoard(gs.boardJson));
+          setOptimisticBoard(null);
         }
 
         setIsLoading(false);
@@ -251,7 +253,7 @@ export function useLobby(lobbyId: string | null) {
       }
     });
 
-    conn.db.lobbyPlayer.onInsert((ctx, row) => {
+    conn.db.lobby_player.onInsert((ctx, row) => {
       if (row.lobbyId === lobbyId) {
         setPlayers(prev => {
           const existing = prev.find(p => p.id === row.id);
@@ -285,7 +287,7 @@ export function useLobby(lobbyId: string | null) {
       }
     });
 
-    conn.db.lobbyPlayer.onUpdate((ctx, oldRow, newRow) => {
+    conn.db.lobby_player.onUpdate((ctx, oldRow, newRow) => {
       if (newRow.lobbyId === lobbyId) {
         setPlayers(prev => prev.map(p => {
           if (p.id !== newRow.id) return p;
@@ -318,13 +320,13 @@ export function useLobby(lobbyId: string | null) {
       }
     });
 
-    conn.db.lobbyPlayer.onDelete((ctx, row) => {
+    conn.db.lobby_player.onDelete((ctx, row) => {
       if (row.lobbyId === lobbyId) {
         setPlayers(prev => prev.filter(p => p.id !== row.id));
       }
     });
 
-    conn.db.gameState.onInsert((ctx, row) => {
+    conn.db.game_state.onInsert((ctx, row) => {
       if (row.lobbyId === lobbyId) {
         const gs = row as unknown as GameState;
         setGameState(gs);
@@ -332,15 +334,16 @@ export function useLobby(lobbyId: string | null) {
       }
     });
 
-    conn.db.gameState.onUpdate((ctx, oldRow, newRow) => {
+    conn.db.game_state.onUpdate((ctx, oldRow, newRow) => {
       if (newRow.lobbyId === lobbyId) {
         const gs = newRow as unknown as GameState;
         setGameState(gs);
         setBoard(parseBoard(gs.boardJson));
+        setOptimisticBoard(null);
       }
     });
 
-    conn.db.gameMove.onInsert((ctx, row) => {
+    conn.db.game_move.onInsert((ctx, row) => {
       if (row.lobbyId === lobbyId) {
         setLastMove(row as unknown as GameMove);
       }
@@ -350,6 +353,28 @@ export function useLobby(lobbyId: string | null) {
       subscription?.unsubscribe();
     };
   }, [isConnected, lobbyId]);
+
+  // Auto-claim timeouts
+  useEffect(() => {
+    if (!gameState || !lobby || lobby.status === "finished") return;
+
+    const interval = setInterval(() => {
+      const now = BigInt(Date.now() * 1000); // SpacetimeDB uses microseconds
+      if (gameState.turnDeadline && now > gameState.turnDeadline) {
+        console.log("Turn deadline passed! Auto-claiming timeout...");
+        const conn = getDbConnection();
+        if (conn && lobbyId) {
+          try {
+            conn.reducers.claimTimeout({ lobbyId });
+          } catch (e) {
+            console.error("Auto claim timeout failed:", e);
+          }
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [gameState, lobbyId]);
 
   // Actions
   const createLobby = useCallback(
@@ -458,15 +483,34 @@ export function useLobby(lobbyId: string | null) {
       const conn = getDbConnection();
       if (!conn || !lobbyId) return false;
 
+      // Optimistic update
+      const currentPlayerId = identity;
+      const currentPlayerColor = players.find(p => p.identity?.toHexString() === currentPlayerId)?.color;
+      
+      if (board && currentPlayerColor) {
+        try {
+          const newBoard = JSON.parse(JSON.stringify(board));
+          newBoard[row][col].orbs += 1;
+          newBoard[row][col].owner = currentPlayerColor;
+          setOptimisticBoard(newBoard);
+          
+          // Clear if server doesn't respond in time
+          setTimeout(() => setOptimisticBoard(null), 3000);
+        } catch (e) {
+          console.error("Optimistic update failed:", e);
+        }
+      }
+
       try {
         conn.reducers.makeMove({ lobbyId, row, col });
         return true;
       } catch (err) {
         console.error("Failed to make move:", err);
+        setOptimisticBoard(null);
         return false;
       }
     },
-    [lobbyId]
+    [lobbyId, board, identity, players]
   );
 
   const claimTimeout = useCallback(async (): Promise<boolean> => {
@@ -521,7 +565,7 @@ export function useLobby(lobbyId: string | null) {
     lobby,
     players,
     gameState,
-    board,
+    board: optimisticBoard || board,
     lastMove,
     isLoading,
     // Derived

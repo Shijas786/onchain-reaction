@@ -30,7 +30,7 @@ fn get_board_size(max_players: u32) -> (usize, usize) {
 // ============================================================================
 
 /// Lobby - Represents a match room
-#[spacetimedb::table(name = lobby, public)]
+#[spacetimedb::table(accessor = lobby, public)]
 pub struct Lobby {
     #[primary_key]
     pub id: String,
@@ -49,7 +49,7 @@ pub struct Lobby {
 }
 
 /// LobbyPlayer - Players in a lobby
-#[spacetimedb::table(name = lobby_player, public)]
+#[spacetimedb::table(accessor = lobby_player, public)]
 #[derive(Clone)]
 pub struct LobbyPlayer {
     #[primary_key]
@@ -67,7 +67,8 @@ pub struct LobbyPlayer {
 }
 
 /// GameState - Current board state for a lobby
-#[spacetimedb::table(name = game_state, public)]
+#[spacetimedb::table(accessor = game_state, public)]
+#[derive(Clone)]
 pub struct GameState {
     #[primary_key]
     pub lobby_id: String,
@@ -83,7 +84,7 @@ pub struct GameState {
 }
 
 /// GameMove - Individual moves for replay/verification
-#[spacetimedb::table(name = game_move, public)]
+#[spacetimedb::table(accessor = game_move, public)]
 pub struct GameMove {
     #[primary_key]
     pub id: String,               // lobbyId + "_" + moveIndex
@@ -148,12 +149,12 @@ pub fn init(_ctx: &ReducerContext) {
 
 #[spacetimedb::reducer(client_connected)]
 pub fn identity_connected(ctx: &ReducerContext) {
-    log::info!("Client connected: {:?}", ctx.sender);
+    log::info!("Client connected: {:?}", ctx.sender());
 }
 
 #[spacetimedb::reducer(client_disconnected)]
 pub fn identity_disconnected(ctx: &ReducerContext) {
-    log::info!("Client disconnected: {:?}", ctx.sender);
+    log::info!("Client disconnected: {:?}", ctx.sender());
 }
 
 // ============================================================================
@@ -181,7 +182,7 @@ pub fn create_lobby(
         chain_id,
         match_id,
         arena_address,
-        host_identity: ctx.sender,
+        host_identity: ctx.sender(),
         host_address: host_address.clone(),
         entry_fee,
         max_players,
@@ -193,11 +194,11 @@ pub fn create_lobby(
     });
 
     // Add host as first player
-    let player_id = format!("{}_{:?}", lobby_id, ctx.sender);
+    let player_id = format!("{}_{:?}", lobby_id, ctx.sender());
     ctx.db.lobby_player().insert(LobbyPlayer {
         id: player_id,
         lobby_id: lobby_id.clone(),
-        identity: ctx.sender,
+        identity: ctx.sender(),
         address: host_address,
         name: host_name,
         color: PLAYER_COLORS[0].to_string(),
@@ -225,7 +226,7 @@ pub fn create_lobby(
         last_move_player: None,
     });
 
-    log::info!("Lobby created: {} by {:?}", lobby_id, ctx.sender);
+    log::info!("Lobby created: {} by {:?}", lobby_id, ctx.sender());
 }
 
 /// Join an existing lobby
@@ -245,7 +246,7 @@ pub fn join_lobby(
     }
 
     // Check if already joined
-    let player_id = format!("{}_{:?}", lobby_id, ctx.sender);
+    let player_id = format!("{}_{:?}", lobby_id, ctx.sender());
     if ctx.db.lobby_player().id().find(&player_id).is_some() {
         panic!("Already joined this lobby");
     }
@@ -270,7 +271,7 @@ pub fn join_lobby(
     ctx.db.lobby_player().insert(LobbyPlayer {
         id: player_id,
         lobby_id: lobby_id.clone(),
-        identity: ctx.sender,
+        identity: ctx.sender(),
         address: player_address,
         name: player_name,
         color: available_color.to_string(),
@@ -286,7 +287,7 @@ pub fn join_lobby(
         ..lobby
     });
 
-    log::info!("Player {:?} joined lobby {}", ctx.sender, lobby_id);
+    log::info!("Player {:?} joined lobby {}", ctx.sender(), lobby_id);
 }
 
 /// Mark player as having deposited USDC on-chain
@@ -317,7 +318,7 @@ pub fn start_game(ctx: &ReducerContext, lobby_id: String) {
     let lobby = ctx.db.lobby().id().find(&lobby_id)
         .expect("Lobby not found");
 
-    if lobby.host_identity != ctx.sender {
+    if lobby.host_identity != ctx.sender() {
         panic!("Only host can start the game");
     }
     if lobby.status != "waiting" {
@@ -375,18 +376,21 @@ pub fn make_move(
     }
 
     // Get game state
-    let game_state = ctx.db.game_state().lobby_id().find(&lobby_id)
-        .expect("Game state not found");
+    let game_state_opt = ctx.db.game_state().lobby_id().find(&lobby_id);
+    if game_state_opt.is_none() {
+        panic!("Game state not found");
+    }
+    let game_state_ref = game_state_opt.as_ref().unwrap();
 
     // === TURN LOCK CHECK (Prevent race conditions) ===
-    if let Some(lock_time) = game_state.turn_lock_until {
+    if let Some(lock_time) = game_state_ref.turn_lock_until {
         if ctx.timestamp < lock_time {
             panic!("Turn is locked, please retry in 50ms");
         }
     }
 
     // === RATE LIMITING (Prevent spam) ===
-    if let Some(time_since_last) = ctx.timestamp.duration_since(game_state.last_move_at) {
+    if let Some(time_since_last) = ctx.timestamp.duration_since(game_state_ref.last_move_at) {
         if time_since_last < std::time::Duration::from_millis(300) {
             panic!("Move too fast, wait 300ms between moves");
         }
@@ -406,9 +410,12 @@ pub fn make_move(
 
     // === AUTO-TIMEOUT CHECK ===
     // If current player's turn has expired, auto-eliminate them
-    if ctx.timestamp > game_state.turn_deadline {
+    // We loop here because multiple players might have timed out if the game was inactive.
+    let mut game_state = ctx.db.game_state().lobby_id().find(&lobby_id).expect("Game state not found");
+
+    while ctx.timestamp > game_state.turn_deadline {
         let timed_out_idx = game_state.current_player_index as usize % players.len();
-        let timed_out_player = &players[timed_out_idx];
+        let timed_out_player = players[timed_out_idx].clone();
         
         log::info!("Player {} auto-timed out!", timed_out_player.name);
         
@@ -443,12 +450,33 @@ pub fn make_move(
         if players.is_empty() {
             panic!("No players left after timeout");
         }
+
+        // Find next player index based on joined_at
+        let mut next_player_index = 0;
+        for (i, p) in players.iter().enumerate() {
+            if p.joined_at > timed_out_player.joined_at {
+                next_player_index = i as u32;
+                break;
+            }
+        }
+
+        // Update game state for the next turn
+        game_state.current_player_index = next_player_index;
+        game_state.turn_deadline += std::time::Duration::from_secs(30);
+
+        // Make sure we don't infinitely loop if turn_deadline is still in the past
+        // because of a very long inactivity. We just set it to now + 30s so the next player gets a full turn.
+        if game_state.turn_deadline < ctx.timestamp {
+            game_state.turn_deadline = ctx.timestamp + std::time::Duration::from_secs(30);
+        }
+
+        ctx.db.game_state().lobby_id().update(game_state.clone());
     }
 
     // Check if it's this player's turn
     let current_idx = game_state.current_player_index as usize % players.len();
     let current_player = &players[current_idx];
-    if current_player.identity != ctx.sender {
+    if current_player.identity != ctx.sender() {
         panic!("Not your turn");
     }
 
@@ -572,7 +600,7 @@ pub fn make_move(
             move_count: game_state.move_count + 1,
             last_move_at: ctx.timestamp,
             turn_lock_until: None,
-            last_move_player: Some(ctx.sender),
+            last_move_player: Some(ctx.sender()),
             ..game_state
         });
         
@@ -586,18 +614,22 @@ pub fn make_move(
         id: move_id,
         lobby_id: lobby_id.clone(),
         move_index: game_state.move_count,
-        player_identity: ctx.sender,
+        player_identity: ctx.sender(),
         row,
         col,
         timestamp: ctx.timestamp,
     });
 
-    // Update game state
-    let new_player_index = if alive_players.len() > 0 {
-        (game_state.current_player_index + 1) % alive_players.len() as u32
-    } else {
-        0
-    };
+    // Find next player index based on joined_at of the current player
+    let mut new_player_index = 0;
+    if alive_players.len() > 0 {
+        for (i, p) in alive_players.iter().enumerate() {
+            if p.joined_at > current_player.joined_at {
+                new_player_index = i as u32;
+                break;
+            }
+        }
+    }
 
     // Set new turn deadline (30 seconds from now)
     let new_deadline = ctx.timestamp + std::time::Duration::from_secs(30);
@@ -611,7 +643,7 @@ pub fn make_move(
         last_move_at: ctx.timestamp,
         turn_deadline: new_deadline,
         turn_lock_until: None, // Release lock
-        last_move_player: Some(ctx.sender), // Track last player
+        last_move_player: Some(ctx.sender()), // Track last player
         ..game_state
     });
 }
@@ -677,19 +709,16 @@ pub fn claim_timeout(ctx: &ReducerContext, lobby_id: String) {
         });
         log::info!("Game finished by timeout! Winner: {} ({})", winner.name, winner.address);
     } else {
-        // Advance turn
-        let new_player_index = if alive_players.len() > 0 {
-            // We don't increment index because the current player was removed, 
-            // so the next player falls into the same index (modulo new length)
-            // But we need to be careful about the modulo logic.
-            // If we had [A, B, C] and B (index 1) timed out. New list [A, C].
-            // We want C to play. C is now at index 1. So index stays 1.
-            // If C (index 2) timed out. New list [A, B]. We want A to play. Index 0.
-            // So we just take current_index % new_length.
-            game_state.current_player_index % alive_players.len() as u32
-        } else {
-            0
-        };
+        // Find next player based on joined_at
+        let mut new_player_index = 0;
+        if alive_players.len() > 0 {
+            for (i, p) in alive_players.iter().enumerate() {
+                if p.joined_at > timed_out_player.joined_at {
+                    new_player_index = i as u32;
+                    break;
+                }
+            }
+        }
 
         // Set new turn deadline
         let new_deadline = ctx.timestamp + std::time::Duration::from_secs(30);
@@ -712,7 +741,7 @@ pub fn leave_lobby(ctx: &ReducerContext, lobby_id: String) {
         panic!("Cannot leave after game started");
     }
 
-    let player_id = format!("{}_{:?}", lobby_id, ctx.sender);
+    let player_id = format!("{}_{:?}", lobby_id, ctx.sender());
     let player = ctx.db.lobby_player().id().find(&player_id)
         .expect("Not in this lobby");
 
@@ -743,12 +772,12 @@ pub fn leave_lobby(ctx: &ReducerContext, lobby_id: String) {
             ..lobby
         });
 
-        log::info!("Player {:?} left lobby {}", ctx.sender, lobby_id);
+        log::info!("Player {:?} left lobby {}", ctx.sender(), lobby_id);
     }
 }
 
 /// Get all lobbies (for listing)
 #[spacetimedb::reducer]
 pub fn ping(ctx: &ReducerContext) {
-    log::info!("Ping from {:?}", ctx.sender);
+    log::info!("Ping from {:?}", ctx.sender());
 }

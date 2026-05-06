@@ -11,14 +11,14 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  lobbyId: __t.string().primaryKey(),
-  boardJson: __t.string(),
+  lobbyId: __t.string().primaryKey().name("lobby_id"),
+  boardJson: __t.string().name("board_json"),
   rows: __t.u32(),
   cols: __t.u32(),
-  currentPlayerIndex: __t.u32(),
-  moveCount: __t.u32(),
-  lastMoveAt: __t.timestamp(),
-  turnDeadline: __t.timestamp(),
-  turnLockUntil: __t.option(__t.timestamp()),
-  lastMovePlayer: __t.option(__t.identity()),
+  currentPlayerIndex: __t.u32().name("current_player_index"),
+  moveCount: __t.u32().name("move_count"),
+  lastMoveAt: __t.timestamp().name("last_move_at"),
+  turnDeadline: __t.timestamp().name("turn_deadline"),
+  turnLockUntil: __t.option(__t.timestamp()).name("turn_lock_until"),
+  lastMovePlayer: __t.option(__t.identity()).name("last_move_player"),
 });

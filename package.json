@@ -12,7 +12,7 @@
     "oracle": "tsx scripts/spacetimeOracle.ts"
   },
   "dependencies": {
-    "@clockworklabs/spacetimedb-sdk": "^1.3.3",
+    "@clockworklabs/spacetimedb-sdk": "^2.0.0",
     "@coinbase/onchainkit": "^1.1.2",
     "@coinbase/wallet-sdk": "^4.3.7",
     "@farcaster/miniapp-sdk": "^0.2.1",
@@ -33,7 +33,7 @@
     "porto": "^0.2.37",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "spacetimedb": "^1.10.0",
+    "spacetimedb": "^2.2.0",
     "tailwind-merge": "^2.3.0",
     "viem": "^2.41.2",
     "wagmi": "^2.19.5",

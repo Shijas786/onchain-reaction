@@ -113,7 +113,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     // Helper: Project 3D world coordinates (x, y, z) to 2D screen coordinates (sx, sy)
     // World Origin (0,0,0) is at the center of the board.
     // x: right, y: down (on board), z: up (height)
-    const project = (x: number, y: number, z: number) => {
+    const project = useCallback((x: number, y: number, z: number) => {
         // 1. Center the board coordinates
         // The board goes from -Width/2 to +Width/2
 
@@ -130,7 +130,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         const sy = (y_rot - z) * scale + offsetY; // Simple z-height effect
 
         return { x: sx, y: sy, scale: scale, depth: z_rot };
-    };
+    }, [scale, offsetX, offsetY]);
 
     useEffect(() => {
         if (explosionQueue.length > 0) {
@@ -465,7 +465,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         render(performance.now());
 
         return () => cancelAnimationFrame(animationFrameId);
-    }, [board, drawOrbGroup, drawOrbShape, rows, cols, dimensions, scale, offsetX, offsetY]);
+    }, [board, drawOrbGroup, drawOrbShape, rows, cols, dimensions, scale, offsetX, offsetY, project, currentTurnPlayer]);
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current;

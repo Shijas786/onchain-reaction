@@ -12,13 +12,13 @@ import {
 
 export default __t.row({
   id: __t.string().primaryKey(),
-  lobbyId: __t.string(),
+  lobbyId: __t.string().name("lobby_id"),
   identity: __t.identity(),
   address: __t.string(),
   name: __t.string(),
   color: __t.string(),
-  isHost: __t.bool(),
-  isAlive: __t.bool(),
-  hasDeposited: __t.bool(),
-  joinedAt: __t.timestamp(),
+  isHost: __t.bool().name("is_host"),
+  isAlive: __t.bool().name("is_alive"),
+  hasDeposited: __t.bool().name("has_deposited"),
+  joinedAt: __t.timestamp().name("joined_at"),
 });

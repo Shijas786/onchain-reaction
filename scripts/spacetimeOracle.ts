@@ -11,16 +11,11 @@ import { privateKeyToAccount } from "viem/accounts";
 import { onchainReactionAbi } from "../lib/onchainReaction";
 import { ARENA_ADDRESSES, CHAIN_IDS } from "../lib/contracts";
 import { appendBuilderSuffix } from "../lib/builderCode";
-import { Infer } from "spacetimedb";
-import {
-  DbConnection,
-  DbConnectionBuilder,
-  Lobby,
-  LobbyRow,
-} from "../lib/spacetimedb/generated";
+import { DbConnection } from "../lib/spacetimedb/generated";
+import { Lobby } from "../lib/spacetimedb/generated/types";
 
-type LobbyType = Infer<typeof Lobby>;
-type LobbyRowType = Infer<typeof LobbyRow>;
+type LobbyType = Lobby;
+type LobbyRowType = Lobby;
 
 let oraclePk = process.env.ORACLE_PRIVATE_KEY;
 if (!oraclePk) {
@@ -222,18 +217,17 @@ async function main() {
 
       const builder = DbConnection.builder()
         .withUri(SPACETIMEDB_CONFIG.host)
-        .withModuleName(SPACETIMEDB_CONFIG.moduleName)
-        .onConnect((conn) => {
+        .onConnect((conn: DbConnection) => {
           clearTimeout(timeout);
           console.log("✅ Connected to SpacetimeDB");
           resolve(conn);
         })
-        .onConnectError((ctx, err) => {
+        .onConnectError((ctx: any, err: any) => {
           clearTimeout(timeout);
           console.error("❌ SpacetimeDB connection error:", err);
           reject(err);
         })
-        .onDisconnect((ctx) => {
+        .onDisconnect((ctx: any) => {
           console.log("⚠️  Disconnected from SpacetimeDB");
           connection = null;
           // Attempt to reconnect
@@ -253,14 +247,14 @@ async function main() {
 
     try {
       const subscription = connection.subscriptionBuilder()
-        .onApplied((ctx) => {
+        .onApplied((ctx: any) => {
           console.log("Subscription applied, scanning for finished games...");
 
           // Get all finished lobbies that have a winner
           try {
-            const allLobbies = Array.from(ctx.db.lobby.iter());
+            const allLobbies = Array.from(ctx.db.lobby.iter()) as Lobby[];
             const finishedLobbies = allLobbies.filter(
-              (lobby: LobbyRowType) => lobby.status === "finished" && lobby.winnerAddress
+              (lobby: Lobby) => lobby.status === "finished" && lobby.winnerAddress
             );
 
             console.log(`Found ${finishedLobbies.length} finished lobby/lobbies`);
@@ -273,7 +267,7 @@ async function main() {
             console.error("Error processing initial lobbies:", err);
           }
         })
-        .onError((err) => {
+        .onError((err: any) => {
           console.error("Subscription error:", err);
         })
         .subscribe([`SELECT * FROM lobby`]);
@@ -282,7 +276,7 @@ async function main() {
     }
 
     // Listen for updates to lobby table
-    connection.db.lobby.onUpdate((ctx, oldRow, newRow) => {
+    connection.db.lobby.onUpdate((ctx: any, oldRow: Lobby, newRow: Lobby) => {
       // Only process when status changes from non-finished to finished
       if (oldRow.status !== "finished" && newRow.status === "finished" && newRow.winnerAddress) {
         console.log(`🎯 New finished lobby detected: ${newRow.id}`);

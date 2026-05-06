@@ -2,18 +2,14 @@
 
 import {
   DbConnection,
-  DbConnectionBuilder,
   tables,
   reducers,
   type EventContext,
   type ReducerEventContext,
   type SubscriptionEventContext,
   type ErrorContext,
-  Lobby,
-  LobbyPlayer,
-  GameState,
-  GameMove,
 } from "./generated";
+import { Lobby, LobbyPlayer, GameState, GameMove } from "./generated/types";
 
 export const SPACETIMEDB_CONFIG = {
   host: process.env.NEXT_PUBLIC_SPACETIMEDB_HOST || "wss://maincloud.spacetimedb.com",
@@ -22,6 +18,7 @@ export const SPACETIMEDB_CONFIG = {
 
 let dbConnection: DbConnection | null = null;
 let connectionPromise: Promise<DbConnection> | null = null;
+let isIntentionalDisconnect = false;
 
 export type { EventContext, ReducerEventContext, SubscriptionEventContext, ErrorContext };
 export { tables, reducers, Lobby, LobbyPlayer, GameState, GameMove };
@@ -49,7 +46,6 @@ export async function connectToSpacetimeDB(): Promise<DbConnection> {
 
     const builder = DbConnection.builder()
       .withUri(SPACETIMEDB_CONFIG.host)
-      .withModuleName(SPACETIMEDB_CONFIG.moduleName)
       .onConnect((conn, identity, token) => {
         clearTimeout(timeout);
         console.log("Connected to SpacetimeDB", identity.toHexString());
@@ -85,12 +81,37 @@ export async function connectToSpacetimeDB(): Promise<DbConnection> {
         console.log("Disconnected from SpacetimeDB");
         dbConnection = null;
         connectionPromise = null;
+        
+        if (!isIntentionalDisconnect && typeof window !== "undefined") {
+          let retries = 0;
+          const MAX_RETRIES = 5;
+          let backoff = 1000;
+          
+          const attemptReconnect = () => {
+            if (retries >= MAX_RETRIES) {
+              console.error("Max reconnect retries reached");
+              return;
+            }
+            retries++;
+            console.log(`Attempting to reconnect (retry ${retries})...`);
+            
+            connectToSpacetimeDB().catch(() => {
+              backoff = Math.min(backoff * 2, 10000);
+              setTimeout(attemptReconnect, backoff);
+            });
+          };
+          
+          setTimeout(attemptReconnect, backoff);
+        }
+        
+        isIntentionalDisconnect = false;
       });
 
     // Use stored credentials if available
     if (storedToken) {
       builder.withToken(storedToken);
     }
+
 
     builder.build();
   });
@@ -100,6 +121,7 @@ export async function connectToSpacetimeDB(): Promise<DbConnection> {
 
 export function disconnectFromSpacetimeDB(): void {
   if (dbConnection) {
+    isIntentionalDisconnect = true;
     dbConnection.disconnect();
     dbConnection = null;
     connectionPromise = null;

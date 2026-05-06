@@ -1,6 +1,7 @@
 
 import "dotenv/config";
-import { DbConnection, Lobby } from "../lib/spacetimedb/generated";
+import { DbConnection } from "../lib/spacetimedb/generated";
+import { Lobby } from "../lib/spacetimedb/generated/types";
 
 const SPACETIMEDB_CONFIG = {
     host: process.env.NEXT_PUBLIC_SPACETIMEDB_HOST || "wss://maincloud.spacetimedb.com",
@@ -13,23 +14,22 @@ async function main() {
     await new Promise<void>((resolve, reject) => {
         const builder = DbConnection.builder()
             .withUri(SPACETIMEDB_CONFIG.host)
-            .withModuleName(SPACETIMEDB_CONFIG.moduleName)
-            .onConnect(async (conn) => {
+            .onConnect(async (conn: DbConnection) => {
                 console.log("✅ Connected to SpacetimeDB");
 
                 // Subscribe to lobby table
                 conn.subscriptionBuilder()
-                    .onApplied((ctx) => {
+                    .onApplied((ctx: any) => {
                         console.log("Subscription applied. Scanning all lobbies...");
 
-                        const lobbies = Array.from(ctx.db.lobby.iter());
+                        const lobbies = Array.from(ctx.db.lobby.iter()) as Lobby[];
                         console.log(`Found ${lobbies.length} total lobbies in DB.`);
 
                         const targetMatches = [33, 34, 35, 36, 37, 38];
 
                         targetMatches.forEach(matchId => {
                             // Fix: Convert both to string for safe comparison to avoid BigInt/number type errors
-                            const lobby = lobbies.find(l => String(l.matchId) === String(matchId));
+                            const lobby = lobbies.find((l: Lobby) => String(l.matchId) === String(matchId));
 
                             if (lobby) {
                                 console.log(`\nMatch #${matchId}: FOUND`);
@@ -47,7 +47,7 @@ async function main() {
                     })
                     .subscribe(["SELECT * FROM lobby"]);
             })
-            .onConnectError((_, err) => {
+            .onConnectError((_: any, err: any) => {
                 console.error("Connection error:", err);
                 reject(err);
             });

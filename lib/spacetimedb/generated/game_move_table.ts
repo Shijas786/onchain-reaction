@@ -12,9 +12,9 @@ import {
 
 export default __t.row({
   id: __t.string().primaryKey(),
-  lobbyId: __t.string(),
-  moveIndex: __t.u32(),
-  playerIdentity: __t.identity(),
+  lobbyId: __t.string().name("lobby_id"),
+  moveIndex: __t.u32().name("move_index"),
+  playerIdentity: __t.identity().name("player_identity"),
   row: __t.u32(),
   col: __t.u32(),
   timestamp: __t.timestamp(),
